@@ -1,0 +1,13 @@
+{
+  "name": "spec-to-ship",
+  "owner": {
+    "name": "Ivan Lay"
+  },
+  "plugins": [
+    {
+      "name": "spec-to-ship",
+      "source": "./",
+      "description": "Pre-code workflow that walks a fuzzy idea through alignment (spec), PRD, and tracer-bullet issues (issues, triage) — landing tickets in a state where an AFK loop can pick them up. Includes diagnose and tdd companion skills."
+    }
+  ]
+}
