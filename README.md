@@ -36,6 +36,63 @@ These scripts are **bespoke shell harnesses that shell out to the `claude` CLI**
 
 After install, skills are available namespaced as `spec-to-ship:spec`, `spec-to-ship:prd`, etc. Claude triggers them automatically based on the description in each `SKILL.md`; you can also invoke them by name.
 
+## Quickstart
+
+A typical session, from empty repo to a ticket an AFK loop can pick up:
+
+### 1. One-time per-repo setup
+
+```sh
+/setup-skills
+```
+
+Interactively scaffolds `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, and `docs/agents/domain.md` (detects GitHub/GitLab from `git remote`, falls back to local markdown). Optionally also installs `ralph/once.sh` and `ralph/afk.sh` for AFK execution. Run once when adopting the workflow; re-run if you change trackers or want to add the ralph harness later.
+
+### 2. Stress-test the idea
+
+```sh
+/spec build a webhook signature verifier with HMAC-SHA256
+/spec @docs/notes/webhook-verifier.md
+/spec
+```
+
+Three equivalent forms: a one-liner argument, an `@` reference to a file, or a bare invocation followed by describing the idea conversationally. The skill interviews one question at a time and recommends an answer at each step until you confirm the plan.
+
+### 3. Capture alignment as a PRD
+
+```sh
+/prd
+```
+
+Synthesizes the just-completed `/spec` conversation into a PRD and publishes it to the issue tracker (labelled `prd`). Run in the **same conversation** as `/spec` — it reads context, it doesn't re-interview.
+
+### 4. Break the PRD into tickets
+
+```sh
+/issues
+/issues #42
+```
+
+Turns the PRD (or a settled plan in the conversation) into vertical-slice tracer-bullet tickets, labelled `needs-triage`. The `#42` form points at an existing ticket to break that one down instead.
+
+### 5. Triage to ready-for-agent
+
+```sh
+/triage
+/triage #42
+```
+
+Walks the `needs-triage` queue and moves each issue to `ready-for-agent` (with a durable agent brief comment), `ready-for-human`, `needs-info`, or `wontfix`. Target a specific ticket with `/triage #42`.
+
+### 6. Execute (optional)
+
+```sh
+bash ralph/once.sh        # one interactive iteration, HITL
+bash ralph/afk.sh 5       # up to 5 unattended iterations in a worktree
+```
+
+`once.sh` keeps you in the loop; `afk.sh` runs unattended through the `ready-for-agent` queue and opens a PR/MR with the result. See the Execution section above for details.
+
 ## Local development
 
 Skills live under `skills/`. Edit a `SKILL.md` and reload the plugin (or restart Claude Code) to pick up changes. The author runs this repo via symlinks from `~/.claude/skills/` so edits apply live without an install/reload cycle.
