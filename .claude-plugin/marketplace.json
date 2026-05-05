@@ -1,5 +1,6 @@
 {
-  "name": "spec-to-ship",
+  "name": "bigintersmind",
+  "description": "Claude Code workflow skills for shaping work before it hits an editor: spec → prd → issues → triage, with diagnose and tdd companions. Lands tickets in a state where an AFK loop can pick them up.",
   "owner": {
     "name": "Ivan Lay"
   },

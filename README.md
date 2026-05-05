@@ -31,7 +31,7 @@ These scripts are **bespoke shell harnesses that shell out to the `claude` CLI**
 
 ```sh
 /plugin marketplace add bigintersmind/spec-to-ship
-/plugin install spec-to-ship@spec-to-ship
+/plugin install spec-to-ship@bigintersmind
 ```
 
 After install, skills are available namespaced as `spec-to-ship:spec`, `spec-to-ship:prd`, etc. Claude triggers them automatically based on the description in each `SKILL.md`; you can also invoke them by name.
