@@ -67,11 +67,11 @@ This is the most important architectural pattern. Consumer skills (`prd`, `issue
 
 The concrete meaning of each verb is resolved per-repo by files that `setup-skills` writes into the *consumer* repo:
 
-- `docs/agents/issue-tracker.md` — defines tracker (GitHub via `gh`, GitLab via `glab`, local markdown under `.scratch/`, or freeform "other") and its CLI conventions.
+- `docs/agents/issue-tracker.md` — defines tracker (bd via the `bd` CLI, GitHub via `gh`, GitLab via `glab`, local markdown under `.scratch/`, or freeform "other") and its CLI conventions.
 - `docs/agents/triage-labels.md` — maps the canonical roles to actual label strings used in that repo.
 - `docs/agents/domain.md` — points to `CONTEXT.md` and ADRs so skills use the project's domain vocabulary.
 
-Seed versions of those docs live in `plugin/skills/setup-skills/issue-tracker-{github,gitlab,local}.md`, `plugin/skills/setup-skills/triage-labels.md`, `plugin/skills/setup-skills/domain.md`. `setup-skills` copies and customizes them.
+Seed versions of those docs live in `plugin/skills/setup-skills/issue-tracker-{beads,github,gitlab,local}.md`, `plugin/skills/setup-skills/triage-labels.md`, `plugin/skills/setup-skills/domain.md`. `setup-skills` copies and customizes them.
 
 **When editing a consumer skill:** keep tracker-specific logic out. If a skill needs new behavior from the tracker, express it as a new stable verb and add the resolution to the seed docs in `setup-skills/` — don't hardcode `gh` or `glab` in the consumer skill.
 
