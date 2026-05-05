@@ -102,7 +102,7 @@ If the user opts in, auto-detect everything; don't ask follow-up questions unles
     - **GitHub**: `gh issue list --state open --json number,title,body,labels,comments --jq '[.[] | {number, title, body, labels: [.labels[].name], comments: [.comments[].body]}]'`
     - **GitLab**: `glab issue list --state opened -F json`
     - **Local markdown**: `cat .scratch/*/issues/*.md`
-    - **bd (beads)**: <!-- PLACEHOLDER: bd's AFK template lands in a follow-up. For now, skip the install (see the bd branch below) and point the user at `<this-skill-dir>/ralph-templates/`. Remove this branch when `afk.sh.beads.template` is added. --> skip the install. The bd-aware AFK template (`afk.sh.beads.template`) is a follow-up; until it lands, point the user at `<this-skill-dir>/ralph-templates/` and explain that the bd AFK loop will be a one-command setup once that template is in place.
+    - **bd (beads)**: `bd ready --json` (only unblocked tickets, so the loop never picks up something whose dependencies are still open).
     - **Other** (freeform tracker): skip the install. The custom workflow needs decisions (fetch command, PR creation) that aren't safe to guess. Point the user at `<this-skill-dir>/ralph-templates/` to adapt by hand.
 - **Test commands**: scan project files for the obvious verifications and assemble a bullet list:
     - `package.json` scripts: include any of `npm run test`, `npm run typecheck`, `npm run lint`, `npm run build` that match scripts that actually exist.
@@ -167,7 +167,7 @@ Create the `docs/agents/` directory if it doesn't exist.
 - Create `<repo-root>/ralph/` if it doesn't exist.
 - Read each template from this skill's `ralph-templates/` directory and write the substituted version to `ralph/`. Use Read + Write to do the substitution, not `sed` — the GitHub ticket-fetch command has nested quotes that get fiddly under shell escaping.
     - `once.sh.template` → `ralph/once.sh` (substitute `__TICKET_FETCH_CMD__`)
-    - `afk.sh.<tracker>.template` → `ralph/afk.sh` (substitute `__BASE_BRANCH__`, `__TICKET_FETCH_CMD__`)
+    - `afk.sh.<tracker>.template` → `ralph/afk.sh` (substitute `__BASE_BRANCH__`, `__TICKET_FETCH_CMD__`). Templates ship for `bd` (`afk.sh.beads.template`), `github`, `gitlab`, and `local`; pick the one matching the tracker chosen in Section A.
     - `prompt.md.template` → `ralph/prompt.md` (substitute `__TEST_COMMANDS__`)
 - `chmod +x ralph/once.sh ralph/afk.sh`.
 - Add a fourth section to the `## Agent skills` index block:
