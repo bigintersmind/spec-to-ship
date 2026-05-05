@@ -4,22 +4,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-A Claude Code **plugin** distributed via the plugin marketplace. There is no build, test, lint, or runtime — every artifact is a prompt or template that ships as-is to consumers. "Editing the codebase" means editing markdown.
+A Claude Code **plugin** distributed via the plugin marketplace. There is no build, test, lint, or runtime — every artifact under `plugin/` is a prompt or template that ships as-is to consumers. "Editing the codebase" means editing markdown.
+
+### Repo layout
+
+The plugin is nested under `plugin/` so the rest of the repo (this `CLAUDE.md`, `README.md`, `LICENSE`, dogfood artifacts under `docs/agents/` and `ralph/`) does **not** ship to consumers. Marketplace install copies only the directory pointed to by `source`.
 
 Manifests:
 
-- `.claude-plugin/plugin.json` — plugin metadata (name, version, description).
-- `.claude-plugin/marketplace.json` — marketplace listing wrapping the plugin.
+- `.claude-plugin/marketplace.json` — marketplace listing at the repo root. Its `source: "./plugin"` is the boundary between repo-only files and what ships.
+- `plugin/.claude-plugin/plugin.json` — plugin metadata (name, version, description). Lives inside the plugin directory.
 
-Bumping `version` in `plugin.json` is the release knob; there is no separate publish step beyond pushing to the marketplace-referenced repo.
+Bumping `version` in `plugin/.claude-plugin/plugin.json` is the release knob; there is no separate publish step beyond pushing to the marketplace-referenced repo.
 
 ## Local development
 
-The author edits via symlinks from `~/.claude/skills/` so changes apply live. Otherwise: edit a `SKILL.md`, then reload the plugin or restart Claude Code. There is nothing to compile or run.
+The author edits via symlinks from `~/.claude/skills/` (each pointing at the corresponding `plugin/skills/<name>/`) so changes apply live. Otherwise: edit a `SKILL.md`, then reload the plugin or restart Claude Code. There is nothing to compile or run.
 
 ## Skill anatomy
 
-Each skill is a directory under `skills/<name>/` containing a `SKILL.md` with YAML frontmatter:
+Each skill is a directory under `plugin/skills/<name>/` containing a `SKILL.md` with YAML frontmatter:
 
 ```yaml
 ---
@@ -33,7 +37,7 @@ disable-model-invocation: true # optional; setup-skills uses this
 
 A skill may include companion docs (`tdd/tests.md`, `tdd/mocking.md`, etc.) that the `SKILL.md` links to and reads on demand — keeps the always-loaded portion small.
 
-A skill may also ship template files (`skills/setup-skills/ralph-templates/*.template`, `skills/diagnose/scripts/hitl-loop.template.sh`) that get *copied into a consumer repo* during setup, not executed in this repo.
+A skill may also ship template files (`plugin/skills/setup-skills/ralph-templates/*.template`, `plugin/skills/diagnose/scripts/hitl-loop.template.sh`) that get *copied into a consumer repo* during setup, not executed in this repo.
 
 ## The workflow arc and skill boundaries
 
@@ -67,13 +71,13 @@ The concrete meaning of each verb is resolved per-repo by files that `setup-skil
 - `docs/agents/triage-labels.md` — maps the canonical roles to actual label strings used in that repo.
 - `docs/agents/domain.md` — points to `CONTEXT.md` and ADRs so skills use the project's domain vocabulary.
 
-Seed versions of those docs live in `skills/setup-skills/issue-tracker-{github,gitlab,local}.md`, `skills/setup-skills/triage-labels.md`, `skills/setup-skills/domain.md`. `setup-skills` copies and customizes them.
+Seed versions of those docs live in `plugin/skills/setup-skills/issue-tracker-{github,gitlab,local}.md`, `plugin/skills/setup-skills/triage-labels.md`, `plugin/skills/setup-skills/domain.md`. `setup-skills` copies and customizes them.
 
 **When editing a consumer skill:** keep tracker-specific logic out. If a skill needs new behavior from the tracker, express it as a new stable verb and add the resolution to the seed docs in `setup-skills/` — don't hardcode `gh` or `glab` in the consumer skill.
 
 ## The AFK loop (ralph/) — opt-in execution layer
 
-`setup-skills` optionally writes a bespoke ralph-style harness into the consumer repo at `ralph/`, sourced from `skills/setup-skills/ralph-templates/`:
+`setup-skills` optionally writes a bespoke ralph-style harness into the consumer repo at `ralph/`, sourced from `plugin/skills/setup-skills/ralph-templates/`:
 
 - `ralph/once.sh` — single interactive `claude` iteration; HITL.
 - `ralph/afk.sh <N>` — up to N non-interactive iterations in a persistent worktree on a `ralph` branch, each spawning `claude --print --output-format stream-json`. Exits early on `<promise>NO MORE TASKS</promise>`. On GitHub/GitLab it pushes and opens/updates a PR; on local-markdown it leaves commits in the worktree.

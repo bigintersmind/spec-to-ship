@@ -95,7 +95,9 @@ bash ralph/afk.sh 5       # up to 5 unattended iterations in a worktree
 
 ## Local development
 
-Skills live under `skills/`. Edit a `SKILL.md` and reload the plugin (or restart Claude Code) to pick up changes. The author runs this repo via symlinks from `~/.claude/skills/` so edits apply live without an install/reload cycle.
+Skills live under `plugin/skills/`. Edit a `SKILL.md` and reload the plugin (or restart Claude Code) to pick up changes. The author runs this repo via symlinks from `~/.claude/skills/<name>` → `plugin/skills/<name>` so edits apply live without an install/reload cycle.
+
+The plugin is nested under `plugin/` because marketplace install copies only the directory pointed to by `marketplace.json`'s `source` field — keeping `plugin/` as the boundary means repo-only files (this README, dogfood artifacts under `docs/agents/` and `ralph/`, etc.) don't ship to consumers.
 
 ## Contributing
 
