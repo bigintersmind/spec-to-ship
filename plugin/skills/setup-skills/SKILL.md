@@ -47,12 +47,20 @@ Note for the user up front: the triage label vocabulary is set up for skills tha
 
 **Section A – Issue tracker.**
 
-> Explainer: The "issue tracker" is where issues live for this repo. Skills like `prd` and `issues` read from and write to it – they need to know whether to call `gh issue create`, `glab issue create`, or write a markdown file under `.scratch/`. Pick the place you actually track work for this repo.
+> Explainer: The "issue tracker" is where issues live for this repo. Skills like `prd` and `issues` read from and write to it – they need to know whether to call `gh issue create`, `glab issue create`, `bd create`, or write a markdown file under `.scratch/`. Pick the place you actually track work for this repo.
 
-Default posture: if a `git remote` points at GitHub, propose GitHub. If a `git remote` points at GitLab (`gitlab.com` or a self-hosted host), propose GitLab. Otherwise, propose local markdown.
+Default posture, in priority order:
+
+1. If `[ -d "$REPO_ROOT/.beads" ]` (the user has run `bd init`), propose **bd**. Active opt-in beats default state — every repo has remotes, so a `.beads/` directory is the stronger signal.
+2. Else if a `git remote` points at GitHub, propose **GitHub**.
+3. Else if a `git remote` points at GitLab (`gitlab.com` or a self-hosted host), propose **GitLab**.
+4. Otherwise, propose **local markdown**.
+
+Detection for bd is just the `.beads/` directory check above — don't try to read bd's internal state to distinguish stealth mode (`bd init --stealth`). Stealth-mode users can override at the prompt.
 
 Supported options:
 
+- **bd (beads)** – issues live in `.beads/` at the repo root, a local-first dependency-graph tracker (uses the `bd` CLI). Seed: [issue-tracker-beads.md](./issue-tracker-beads.md).
 - **GitHub** – issues live in the repo's GitHub Issues (uses the `gh` CLI). Seed: [issue-tracker-github.md](./issue-tracker-github.md).
 - **GitLab** – issues live in the repo's GitLab Issues (uses the `glab` CLI). Seed: [issue-tracker-gitlab.md](./issue-tracker-gitlab.md).
 - **Local markdown** – issues live as files under `.scratch/<feature-slug>/` in this repo (good for solo projects or repos without a remote). Seed: [issue-tracker-local.md](./issue-tracker-local.md).
@@ -94,6 +102,7 @@ If the user opts in, auto-detect everything; don't ask follow-up questions unles
     - **GitHub**: `gh issue list --state open --json number,title,body,labels,comments --jq '[.[] | {number, title, body, labels: [.labels[].name], comments: [.comments[].body]}]'`
     - **GitLab**: `glab issue list --state opened -F json`
     - **Local markdown**: `cat .scratch/*/issues/*.md`
+    - **bd (beads)**: <!-- PLACEHOLDER: bd's AFK template lands in a follow-up. For now, skip the install (see the bd branch below) and point the user at `<this-skill-dir>/ralph-templates/`. Remove this branch when `afk.sh.beads.template` is added. --> skip the install. The bd-aware AFK template (`afk.sh.beads.template`) is a follow-up; until it lands, point the user at `<this-skill-dir>/ralph-templates/` and explain that the bd AFK loop will be a one-command setup once that template is in place.
     - **Other** (freeform tracker): skip the install. The custom workflow needs decisions (fetch command, PR creation) that aren't safe to guess. Point the user at `<this-skill-dir>/ralph-templates/` to adapt by hand.
 - **Test commands**: scan project files for the obvious verifications and assemble a bullet list:
     - `package.json` scripts: include any of `npm run test`, `npm run typecheck`, `npm run lint`, `npm run build` that match scripts that actually exist.
@@ -147,7 +156,7 @@ If an `## Agent skills` block already exists in the chosen file, update its cont
 
 **Then write the three reference docs to `docs/agents/`:**
 
-- `docs/agents/issue-tracker.md` – copy the matching seed (`issue-tracker-github.md`, `issue-tracker-gitlab.md`, or `issue-tracker-local.md`) from this skill's directory. For "other" trackers, write from scratch using the user's description.
+- `docs/agents/issue-tracker.md` – copy the matching seed (`issue-tracker-beads.md`, `issue-tracker-github.md`, `issue-tracker-gitlab.md`, or `issue-tracker-local.md`) from this skill's directory. For "other" trackers, write from scratch using the user's description.
 - `docs/agents/triage-labels.md` – copy [triage-labels.md](./triage-labels.md), filling in the right-hand column with whatever overrides the user chose.
 - `docs/agents/domain.md` – copy [domain.md](./domain.md), trimming or adjusting the file structure section to match single- vs multi-context.
 
