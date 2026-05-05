@@ -80,7 +80,7 @@ Seed versions of those docs live in `plugin/skills/setup-skills/issue-tracker-{b
 `setup-skills` optionally writes a bespoke ralph-style harness into the consumer repo at `ralph/`, sourced from `plugin/skills/setup-skills/ralph-templates/`:
 
 - `ralph/once.sh` — single interactive `claude` iteration; HITL.
-- `ralph/afk.sh <N>` — up to N non-interactive iterations in a persistent worktree on a `ralph` branch, each spawning `claude --print --output-format stream-json`. Exits early on `<promise>NO MORE TASKS</promise>`. On GitHub/GitLab it pushes and opens/updates a PR; on local-markdown it leaves commits in the worktree.
+- `ralph/afk.sh <N>` — up to N non-interactive iterations in a persistent worktree on a `ralph` branch, each spawning `claude --print --output-format stream-json`. Exits early on `<promise>NO MORE TASKS</promise>`. On GitHub/GitLab it pushes and opens/updates a PR/MR; on local-markdown it leaves commits in the worktree; on bd it dispatches at runtime on the origin remote's host (GitHub or GitLab → push + PR/MR; otherwise → leave commits in the worktree).
 - `ralph/prompt.md` — the prompt fed to each iteration.
 
 These are **plain bash that ships into the consumer repo** — not Claude Code's `/loop` skill, not the `ralph-loop` plugin. They live in the consumer's git history so the user can read and tweak them. When editing the templates here, remember they'll be checked into someone else's repo.

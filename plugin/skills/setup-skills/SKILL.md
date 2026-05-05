@@ -1,6 +1,6 @@
 ---
 name: setup-skills
-description: Sets up an `## Agent skills` index block in CLAUDE.md/AGENTS.md and per-repo reference docs in `docs/agents/` so the engineering skills know this repo's issue tracker (GitHub, GitLab, or local markdown), triage label vocabulary, and domain doc layout. Optionally also installs the AFK ("away from keyboard") loop in `ralph/` for autonomous ticket execution. Run before first use of `spec`, `prd`, or `issues` – or if those skills appear to be missing context about the issue tracker, triage labels, or domain docs – or to wire up the AFK loop.
+description: Sets up an `## Agent skills` index block in CLAUDE.md/AGENTS.md and per-repo reference docs in `docs/agents/` so the engineering skills know this repo's issue tracker (bd / beads, GitHub, GitLab, or local markdown), triage label vocabulary, and domain doc layout. Optionally also installs the AFK ("away from keyboard") loop in `ralph/` for autonomous ticket execution. Run before first use of `spec`, `prd`, or `issues` – or if those skills appear to be missing context about the issue tracker, triage labels, or domain docs – or to wire up the AFK loop.
 disable-model-invocation: true
 ---
 
@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 Scaffold the per-repo configuration that the engineering skills assume:
 
-- **Issue tracker** – where issues live and how to publish/fetch them (GitHub, GitLab, local markdown, or a freeform "other" workflow you describe)
+- **Issue tracker** – where issues live and how to publish/fetch them (bd / beads, GitHub, GitLab, local markdown, or a freeform "other" workflow you describe)
 - **Triage labels** – the strings used for the five canonical triage roles
 - **Domain docs** – where `CONTEXT.md` and ADRs live, and how consumer skills should use them
 - **AFK loop (optional)** – `ralph/once.sh` for one Claude iteration, `ralph/afk.sh` for a multi-iteration worktree-isolated loop that opens a PR with the result. Skip this if you only want triage and briefs without autonomous execution.
@@ -53,7 +53,7 @@ Default posture, in priority order:
 
 1. If `[ -d "$REPO_ROOT/.beads" ]` (the user has run `bd init`), propose **bd**. Active opt-in beats default state — every repo has remotes, so a `.beads/` directory is the stronger signal.
 2. Else if a `git remote` points at GitHub, propose **GitHub**.
-3. Else if a `git remote` points at GitLab (`gitlab.com` or a self-hosted host), propose **GitLab**.
+3. Else if a `git remote` points at GitLab (host is `gitlab.com` or contains `gitlab`, matching the AFK template's runtime check for self-hosted instances), propose **GitLab**.
 4. Otherwise, propose **local markdown**.
 
 Detection for bd is just the `.beads/` directory check above — don't try to read bd's internal state to distinguish stealth mode (`bd init --stealth`). Stealth-mode users can override at the prompt.
@@ -102,7 +102,7 @@ If the user opts in, auto-detect everything; don't ask follow-up questions unles
     - **GitHub**: `gh issue list --state open --json number,title,body,labels,comments --jq '[.[] | {number, title, body, labels: [.labels[].name], comments: [.comments[].body]}]'`
     - **GitLab**: `glab issue list --state opened -F json`
     - **Local markdown**: `cat .scratch/*/issues/*.md`
-    - **bd (beads)**: `bd ready --json` (only unblocked tickets, so the loop never picks up something whose dependencies are still open).
+    - **bd (beads)**: `bd ready --json`
     - **Other** (freeform tracker): skip the install. The custom workflow needs decisions (fetch command, PR creation) that aren't safe to guess. Point the user at `<this-skill-dir>/ralph-templates/` to adapt by hand.
 - **Test commands**: scan project files for the obvious verifications and assemble a bullet list:
     - `package.json` scripts: include any of `npm run test`, `npm run typecheck`, `npm run lint`, `npm run build` that match scripts that actually exist.

@@ -26,7 +26,13 @@ bd's `bd create` accepts `--description` plus structured fields (`--design`, `--
 
 ## When a skill says "publish to the issue tracker"
 
-Run `bd create` with the title and a heredoc'd `--description` body. Set `-t` to the appropriate type (`task` for most issues, `bug` for bugs, `feature` for features, etc.) and `-p N` if a priority is implied.
+Run `bd create` with the title and a heredoc'd `--description` body. Set `-t` to the appropriate type (`task` for most issues, `bug` for bugs, `feature` for features, etc.) and `-p N` if a priority is implied. Use `--description -` so the body comes from stdin — that avoids quoting issues with multi-line markdown.
+
+```bash
+bd create "Title goes here" -t task --description - <<'EOF'
+... full body as one markdown blob ...
+EOF
+```
 
 ## When a skill says "fetch the relevant ticket"
 
