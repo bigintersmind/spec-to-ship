@@ -23,7 +23,7 @@ setup-skills → spec → prd → issues → triage → ralph/once.sh | ralph/af
 Triage gets your tickets to `ready-for-agent`; execution is what actually consumes them. If you opt in during `setup-skills`, two shell scripts get written to your repo at `ralph/`:
 
 - **`ralph/once.sh`** — runs a single interactive `claude` iteration. The model reads the prompt, picks the next `ready-for-agent` ticket, and works it with you in the loop. Useful for HITL execution and for sanity-checking the prompt before turning it loose.
-- **`ralph/afk.sh <N>`** — a bespoke ralph-style loop. Iterates up to `N` times inside a persistent git worktree on a `ralph` branch, each pass spawning a non-interactive `claude --print --output-format stream-json` with the prompt, the last few commits, and the open issue list piped in. Exits early when the model emits `<promise>NO MORE TASKS</promise>`. On GitHub/GitLab it pushes the branch and opens/updates a PR/MR at the end; for the local-markdown tracker it leaves the commits in the worktree for you to merge.
+- **`ralph/afk.sh <N>`** — a bespoke ralph-style loop. Iterates up to `N` times inside a persistent git worktree on a `ralph` branch, each pass spawning a non-interactive `claude --print --output-format stream-json` with the prompt, the last few commits, and the open issue list piped in. Exits early when the model emits `<promise>NO MORE TASKS</promise>`. On GitHub/GitLab it pushes the branch and opens/updates a PR/MR at the end; for the local-markdown tracker it leaves the commits in the worktree for you to merge. For bd (beads), it dispatches at runtime based on the origin remote's host — GitHub/GitLab origins push and open a PR/MR; otherwise it leaves commits in the worktree.
 
 These scripts are **bespoke shell harnesses that shell out to the `claude` CLI** — they're not Claude Code's built-in `/loop` skill, and they're not the `ralph-loop` plugin. The loop logic is plain bash that lives in your repo, so you can read it, tweak it, and check it into git alongside the prompt.
 
@@ -46,7 +46,7 @@ A typical session, from empty repo to a ticket an AFK loop can pick up:
 /setup-skills
 ```
 
-Interactively scaffolds `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, and `docs/agents/domain.md` (detects GitHub/GitLab from `git remote`, falls back to local markdown). Optionally also installs `ralph/once.sh` and `ralph/afk.sh` for AFK execution. Run once when adopting the workflow; re-run if you change trackers or want to add the ralph harness later.
+Interactively scaffolds `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, and `docs/agents/domain.md` (detects bd from `.beads/`, GitHub/GitLab from `git remote`, falls back to local markdown). Optionally also installs `ralph/once.sh` and `ralph/afk.sh` for AFK execution. Run once when adopting the workflow; re-run if you change trackers or want to add the ralph harness later.
 
 ### 2. Stress-test the idea
 
