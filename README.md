@@ -90,7 +90,7 @@ Walks the `needs-triage` queue and moves each issue to `ready-for-agent` (with a
 ```sh
 bash ralph/once.sh        # one interactive iteration, HITL
 bash ralph/afk.sh 5       # up to 5 unattended iterations in a worktree
-bash ralph/review.sh #42  # post-loop PRD review against PRD #42
+bash ralph/review.sh 42   # post-loop PRD review against PRD #42
 ```
 
 `once.sh` keeps you in the loop; `afk.sh` runs unattended through the `ready-for-agent` queue and opens a PR/MR with the result; `review.sh` runs after the loop to compare what shipped against the PRD and post a review comment on the PRD ticket. See the Execution section above for details.
