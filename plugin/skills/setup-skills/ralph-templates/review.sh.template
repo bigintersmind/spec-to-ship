@@ -19,15 +19,56 @@ WORKTREE_PATH="${REPO_ROOT}-afk"
 # detected base branch (e.g. main, master).
 BASE_BRANCH="__BASE_BRANCH__"
 
-MAIN_COMMITS_AHEAD=$(git -C "$REPO_ROOT" rev-list --count "${BASE_BRANCH}..HEAD" 2>/dev/null || echo 0)
+# When HEAD is on the base branch itself (e.g. once.sh-on-main work that hasn't
+# been pushed yet), ${BASE_BRANCH}..HEAD is tautologically empty. Compare
+# against origin/${BASE_BRANCH} instead so unpushed commits are reviewable.
+MAIN_BRANCH=$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD)
+MAIN_COMPARE_REF=""
+MAIN_COMMITS_AHEAD=0
+MAIN_BASE_FAILURE=""
+
+if [ "$MAIN_BRANCH" = "$BASE_BRANCH" ]; then
+  if ! git -C "$REPO_ROOT" remote get-url origin >/dev/null 2>&1; then
+    MAIN_BASE_FAILURE="no-origin"
+  elif ! git -C "$REPO_ROOT" rev-parse --verify --quiet "origin/${BASE_BRANCH}" >/dev/null 2>&1; then
+    MAIN_BASE_FAILURE="no-origin-ref"
+  else
+    MAIN_COMPARE_REF="origin/${BASE_BRANCH}"
+    MAIN_COMMITS_AHEAD=$(git -C "$REPO_ROOT" rev-list --count "${MAIN_COMPARE_REF}..HEAD" 2>/dev/null || echo 0)
+    if [ "$MAIN_COMMITS_AHEAD" -eq 0 ]; then
+      MAIN_BASE_FAILURE="already-pushed"
+    fi
+  fi
+else
+  MAIN_COMPARE_REF="$BASE_BRANCH"
+  MAIN_COMMITS_AHEAD=$(git -C "$REPO_ROOT" rev-list --count "${MAIN_COMPARE_REF}..HEAD" 2>/dev/null || echo 0)
+fi
+
+print_main_status() {
+  case "$MAIN_BASE_FAILURE" in
+    already-pushed)
+      echo "  Main checkout ($REPO_ROOT): on base branch ${BASE_BRANCH}; HEAD matches origin/${BASE_BRANCH} (appears already pushed)."
+      ;;
+    no-origin)
+      echo "  Main checkout ($REPO_ROOT): on base branch ${BASE_BRANCH}; no 'origin' remote configured, can't compare against origin/${BASE_BRANCH}."
+      ;;
+    no-origin-ref)
+      echo "  Main checkout ($REPO_ROOT): on base branch ${BASE_BRANCH}; origin/${BASE_BRANCH} ref not found locally — try 'git fetch origin'."
+      ;;
+    *)
+      echo "  Main checkout ($REPO_ROOT): 0 commits ahead of ${BASE_BRANCH}."
+      ;;
+  esac
+}
 
 if [ "$MAIN_COMMITS_AHEAD" -gt 0 ]; then
   TARGET_PATH="$REPO_ROOT"
   TARGET_LABEL="main checkout"
+  COMPARE_REF="$MAIN_COMPARE_REF"
 else
   if [ ! -d "$WORKTREE_PATH" ]; then
     echo "Error: nothing to review."
-    echo "  Main checkout ($REPO_ROOT): 0 commits ahead of $BASE_BRANCH."
+    print_main_status
     echo "  AFK worktree ($WORKTREE_PATH): worktree absent."
     echo "Run ./ralph/once.sh, ./ralph/afk.sh <N>, or commit work directly, then re-run."
     exit 1
@@ -35,13 +76,14 @@ else
   WT_COMMITS_AHEAD=$(git -C "$WORKTREE_PATH" rev-list --count "${BASE_BRANCH}..HEAD" 2>/dev/null || echo 0)
   if [ "$WT_COMMITS_AHEAD" -eq 0 ]; then
     echo "Error: nothing to review."
-    echo "  Main checkout ($REPO_ROOT): 0 commits ahead of $BASE_BRANCH."
+    print_main_status
     echo "  AFK worktree ($WORKTREE_PATH): worktree empty (0 commits ahead of $BASE_BRANCH)."
     echo "Run ./ralph/once.sh, ./ralph/afk.sh <N>, or commit work directly, then re-run."
     exit 1
   fi
   TARGET_PATH="$WORKTREE_PATH"
   TARGET_LABEL="AFK worktree at $WORKTREE_PATH"
+  COMPARE_REF="$BASE_BRANCH"
 fi
 
 cd "$TARGET_PATH"
@@ -50,15 +92,15 @@ cd "$TARGET_PATH"
 # what was reviewed and what got reported in the comment header. Three-dot
 # diff matches the GitHub/GitLab PR view.
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-BASE_SHA=$(git rev-parse --short "$BASE_BRANCH")
+BASE_SHA=$(git rev-parse --short "$COMPARE_REF")
 HEAD_SHA=$(git rev-parse --short HEAD)
 RANGE="${BASE_SHA}..${HEAD_SHA}"
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
-echo "Reviewing ${TARGET_LABEL} (branch ${BRANCH}) against ${BASE_BRANCH} — range ${RANGE}"
+echo "Reviewing ${TARGET_LABEL} (branch ${BRANCH}) against ${COMPARE_REF} — range ${RANGE}"
 
-DIFF=$(git diff "${BASE_BRANCH}...HEAD")
-COMMITS=$(git log "${BASE_BRANCH}..HEAD" --format="%H%n%ad%n%B---" --date=short)
+DIFF=$(git diff "${COMPARE_REF}...HEAD")
+COMMITS=$(git log "${COMPARE_REF}..HEAD" --format="%H%n%ad%n%B---" --date=short)
 
 prompt=$(cat ralph/review-prompt.md)
 
@@ -75,5 +117,5 @@ Commits in range:
 $COMMITS
 
 ---
-Diff (${BASE_BRANCH}...HEAD):
+Diff (${COMPARE_REF}...HEAD):
 $DIFF"
