@@ -1,0 +1,65 @@
+#!/bin/bash
+set -eo pipefail
+
+if [ -z "$1" ]; then
+  echo "Usage: $0 <prd-ref>"
+  exit 1
+fi
+
+PRD_REF="$1"
+
+# Run from the persistent worktree afk.sh writes into. The maintainer invokes
+# this from the main checkout after afk.sh exits; cd-ing into the same
+# worktree keeps the diff/commit context aligned with what just shipped.
+REPO_ROOT=$(git rev-parse --show-toplevel)
+WORKTREE_PATH="${REPO_ROOT}-afk"
+BRANCH="ralph"
+# __BASE_BRANCH__ is replaced by setup-skills at install time with the repo's
+# detected base branch (e.g. main, master).
+BASE_BRANCH="__BASE_BRANCH__"
+
+if [ ! -d "$WORKTREE_PATH" ]; then
+  echo "Error: AFK worktree not found at $WORKTREE_PATH."
+  echo "Run ./ralph/afk.sh <N> first to populate it, then re-run this script."
+  exit 1
+fi
+
+cd "$WORKTREE_PATH"
+
+# Verify there's actually something to review. If the ralph branch hasn't
+# diverged from base, the loop produced no commits and there's no
+# implementation to compare against the PRD.
+COMMITS_AHEAD=$(git rev-list --count "${BASE_BRANCH}..HEAD" 2>/dev/null || echo 0)
+if [ "$COMMITS_AHEAD" -eq 0 ]; then
+  echo "Error: no commits on $BRANCH ahead of $BASE_BRANCH; nothing to review."
+  exit 1
+fi
+
+# Pin timestamp and commit range in bash so the prompt can't drift between
+# what was reviewed and what got reported in the comment header. Three-dot
+# diff matches the GitHub/GitLab PR view.
+TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+BASE_SHA=$(git rev-parse --short "$BASE_BRANCH")
+HEAD_SHA=$(git rev-parse --short HEAD)
+RANGE="${BASE_SHA}..${HEAD_SHA}"
+
+DIFF=$(git diff "${BASE_BRANCH}...HEAD")
+COMMITS=$(git log "${BASE_BRANCH}..HEAD" --format="%H%n%ad%n%B---" --date=short)
+
+prompt=$(cat ralph/review-prompt.md)
+
+claude \
+  --print \
+  "PRD ref: $PRD_REF
+Timestamp: $TIMESTAMP
+Range: $RANGE
+
+$prompt
+
+---
+Commits in range:
+$COMMITS
+
+---
+Diff (${BASE_BRANCH}...HEAD):
+$DIFF"

@@ -82,6 +82,8 @@ Seed versions of those docs live in `plugin/skills/setup-skills/issue-tracker-{b
 - `ralph/once.sh` — single interactive `claude` iteration; HITL.
 - `ralph/afk.sh <N>` — up to N non-interactive iterations in a persistent worktree on a `ralph` branch, each spawning `claude --print --output-format stream-json`. Exits early on `<promise>NO MORE TASKS</promise>`. On GitHub/GitLab it pushes and opens/updates a PR/MR; on local-markdown it leaves commits in the worktree; on bd it dispatches at runtime on the origin remote's host (GitHub or GitLab → push + PR/MR; otherwise → leave commits in the worktree).
 - `ralph/prompt.md` — the prompt fed to each iteration.
+- `ralph/review.sh <prd-ref>` — post-loop review companion. Runs a single `claude --print` iteration in the same worktree, diffs against base, fetches the PRD and per-child agent briefs, and posts a structured five-question review comment on the PRD ticket. Idempotent (re-runs append). Existing AFK-installed consumer repos pick this up via `setup-skills`'s incremental install path when `ralph/` is missing the new files.
+- `ralph/review-prompt.md` — the prompt fed to `review.sh`.
 
 These are **plain bash that ships into the consumer repo** — not Claude Code's `/loop` skill, not the `ralph-loop` plugin. They live in the consumer's git history so the user can read and tweak them. When editing the templates here, remember they'll be checked into someone else's repo.
 
@@ -110,4 +112,4 @@ Single-context. See `docs/agents/domain.md`.
 
 ### AFK loop
 
-Installed at `ralph/`. Run `./ralph/afk.sh <N>` to loop on `ready-for-agent` tickets, or `./ralph/once.sh` for a single iteration. Worktree-isolated on the `ralph` branch.
+Installed at `ralph/`. Run `./ralph/afk.sh <N>` to loop on `ready-for-agent` tickets, or `./ralph/once.sh` for a single iteration. After the loop exits, run `./ralph/review.sh <prd-ref>` to review the implementation against a PRD. Worktree-isolated on the `ralph` branch.

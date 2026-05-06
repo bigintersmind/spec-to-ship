@@ -35,7 +35,7 @@ Look at the current repo to understand its starting state. Read whatever exists;
 - `CONTEXT.md` and `CONTEXT-MAP.md` at the repo root
 - `docs/adr/` and any `src/*/docs/adr/` directories
 - `.scratch/` – sign that a local-markdown issue tracker convention is already in use
-- `ralph/` – sign that the AFK loop is already installed; if present, default Section D to "skip" unless the user wants to reinstall
+- `ralph/` – sign that the AFK loop is already installed. Check whether all expected files are present (see Section D for the list); a partial install is the migration path for repos that installed the loop before later additions shipped, and Section D's default flips from "skip" to "incremental install" in that case.
 
 ### 2. Present findings and ask
 
@@ -91,11 +91,23 @@ Confirm the layout:
 
 **Section D – AFK loop (optional).**
 
-> Explainer: Once the foundation above is in place, you can install the AFK ("away from keyboard") loop. `ralph/once.sh` runs a single Claude iteration — useful for testing the prompt. `ralph/afk.sh <N>` loops up to N iterations inside a persistent git worktree on a `ralph` branch; each iteration picks the next `ready-for-agent` ticket, implements it, commits, and the loop ends by pushing the branch and (for GitHub/GitLab) opening or updating a PR/MR. Requires `git`, the chosen tracker's CLI authenticated, and a remote configured for push (or local merge if the tracker is local markdown).
+> Explainer: Once the foundation above is in place, you can install the AFK ("away from keyboard") loop. `ralph/once.sh` runs a single Claude iteration — useful for testing the prompt. `ralph/afk.sh <N>` loops up to N iterations inside a persistent git worktree on a `ralph` branch; each iteration picks the next `ready-for-agent` ticket, implements it, commits, and the loop ends by pushing the branch and (for GitHub/GitLab) opening or updating a PR/MR. After the loop exits, `ralph/review.sh <prd-ref>` runs a single Claude iteration that compares the diff against the PRD and posts a structured five-question review comment on the PRD ticket. Requires `git`, the chosen tracker's CLI authenticated, and a remote configured for push (or local merge if the tracker is local markdown).
 
-Default: ask whether to install. Skipping is fine — the rest of the setup works without it. If `ralph/` already exists in the repo, default to "skip" unless the user wants to reinstall (which overwrites their current scripts).
+The full set of files this step installs into `ralph/`:
 
-If the user opts in, auto-detect everything; don't ask follow-up questions unless detection fails:
+- `once.sh` — one-shot interactive iteration
+- `afk.sh` — multi-iteration loop
+- `prompt.md` — the prompt fed to each loop iteration
+- `review.sh` — post-loop PRD review wrapper
+- `review-prompt.md` — the prompt fed to `review.sh`
+
+Default behaviour depends on what's already in `ralph/`:
+
+- **`ralph/` does not exist** — ask whether to install. Skipping is fine; the rest of the setup works without it.
+- **`ralph/` exists and contains every expected file** — default to "skip". Offer "reinstall (overwrite all)" as the alternative. Reinstall clobbers any local edits (including to `prompt.md`), so it's the explicit-opt-in path, not the default.
+- **`ralph/` exists but is missing one or more expected files** — default to "incremental install": copy only the missing files, leave all existing files untouched. This is the migration route for repos that installed the AFK loop before later additions (e.g. `review.sh`) shipped. "Reinstall (overwrite all)" remains available; "skip" leaves the repo with an incomplete `ralph/` and is rarely what the user wants.
+
+If the user opts in (full or incremental), auto-detect everything; don't ask follow-up questions unless detection fails:
 
 - **Base branch**: `git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@'`. If no remote, fall back to whatever `git config init.defaultBranch` returns, or `main`.
 - **Ticket-fetch command**: depends on the tracker chosen in Section A.
@@ -120,7 +132,7 @@ Show the user a draft of:
 
 - The `## Agent skills` index block to add to `CLAUDE.md` / `AGENTS.md`
 - The contents of `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, and `docs/agents/domain.md` (built from the seed templates with the user's choices applied)
-- If installing the AFK loop: the substituted contents of `ralph/once.sh`, `ralph/afk.sh`, and `ralph/prompt.md`, plus the detected base branch, ticket-fetch command, and test commands list
+- If installing the AFK loop: the substituted contents of `ralph/once.sh`, `ralph/afk.sh`, `ralph/prompt.md`, `ralph/review.sh`, and `ralph/review-prompt.md`, plus the detected base branch, ticket-fetch command, and test commands list. For an incremental install, only show the files that will actually be written.
 
 Let them edit before writing.
 
@@ -162,20 +174,23 @@ If an `## Agent skills` block already exists in the chosen file, update its cont
 
 Create the `docs/agents/` directory if it doesn't exist.
 
-**If installing the AFK loop**, also:
+**If installing the AFK loop** (full or incremental — see Section D), also:
 
 - Create `<repo-root>/ralph/` if it doesn't exist.
 - Read each template from this skill's `ralph-templates/` directory and write the substituted version to `ralph/`. Use Read + Write to do the substitution, not `sed` — the GitHub ticket-fetch command has nested quotes that get fiddly under shell escaping.
     - `once.sh.template` → `ralph/once.sh` (substitute `__TICKET_FETCH_CMD__`)
     - `afk.sh.<tracker>.template` → `ralph/afk.sh` (substitute `__BASE_BRANCH__`, `__TICKET_FETCH_CMD__`). Templates ship for `bd` (`afk.sh.beads.template`), `github`, `gitlab`, and `local`; pick the one matching the tracker chosen in Section A.
     - `prompt.md.template` → `ralph/prompt.md` (substitute `__TEST_COMMANDS__`)
-- `chmod +x ralph/once.sh ralph/afk.sh`.
+    - `review.sh.template` → `ralph/review.sh` (substitute `__BASE_BRANCH__`)
+    - `review-prompt.md.template` → `ralph/review-prompt.md` (no substitution today; follows the same pattern in case future variables are added)
+- For an **incremental install**, write only the files that are missing from `ralph/`. Leave all existing files untouched — they may carry user customizations (especially to `prompt.md`).
+- `chmod +x` the shell scripts that were just written: `ralph/once.sh`, `ralph/afk.sh`, `ralph/review.sh` (run only against files that exist after the previous step).
 - Add a fourth section to the `## Agent skills` index block:
 
 ```markdown
 ### AFK loop
 
-Installed at `ralph/`. Run `./ralph/afk.sh <N>` to loop on `ready-for-agent` tickets, or `./ralph/once.sh` for a single iteration. Worktree-isolated on the `ralph` branch.
+Installed at `ralph/`. Run `./ralph/afk.sh <N>` to loop on `ready-for-agent` tickets, or `./ralph/once.sh` for a single iteration. After the loop exits, run `./ralph/review.sh <prd-ref>` to review the implementation against a PRD. Worktree-isolated on the `ralph` branch.
 ```
 
 - Tell the user to commit `ralph/` to the base branch — the AFK loop reads its prompt from inside the worktree, so the scripts need to be tracked in git for the `ralph` branch to inherit them.
@@ -187,4 +202,4 @@ Tell the user the setup is complete. Mention:
 - Consumer skills (`prd`, `issues`) will now read `docs/agents/*.md` automatically when they need tracker-specific behavior.
 - They can edit `docs/agents/*.md` directly later (per-repo customization lives there) – re-running this skill is only necessary if they want to switch issue trackers or restart from scratch.
 - The `## Agent skills` block in CLAUDE.md is just an index pointing at those docs; don't put workflow content there directly.
-- If the AFK loop was installed: test it with `./ralph/once.sh` (single interactive iteration) before running `./ralph/afk.sh <N>` for the multi-iteration loop. The first afk.sh run creates the worktree at `<repo>-afk/`. To clean up later: `git worktree remove <repo>-afk` and `git branch -D ralph` from the main checkout.
+- If the AFK loop was installed: test it with `./ralph/once.sh` (single interactive iteration) before running `./ralph/afk.sh <N>` for the multi-iteration loop. The first afk.sh run creates the worktree at `<repo>-afk/`. After `afk.sh` exits, run `./ralph/review.sh <prd-ref>` against any PRD whose children just shipped — it posts a structured five-question review comment on the PRD ticket. To clean up later: `git worktree remove <repo>-afk` and `git branch -D ralph` from the main checkout.
