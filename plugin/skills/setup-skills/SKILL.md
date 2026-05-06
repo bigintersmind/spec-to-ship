@@ -190,7 +190,7 @@ Create the `docs/agents/` directory if it doesn't exist.
 ```markdown
 ### AFK loop
 
-Installed at `ralph/`. Run `./ralph/afk.sh <N>` to loop on `ready-for-agent` tickets, or `./ralph/once.sh` for a single iteration. After the loop exits, run `./ralph/review.sh <prd-ref>` to review the implementation against a PRD. Worktree-isolated on the `ralph` branch.
+Installed at `ralph/`. Run `./ralph/afk.sh <N>` to loop on `ready-for-agent` tickets, or `./ralph/once.sh` for a single iteration. After the loop (or any other completion path — `once.sh`, hand work) exits, run `./ralph/review.sh <prd-ref>` to review the implementation against a PRD; the script auto-detects whether to review the main checkout or the AFK worktree. Worktree-isolated on the `ralph` branch.
 ```
 
 - Tell the user to commit `ralph/` to the base branch — the AFK loop reads its prompt from inside the worktree, so the scripts need to be tracked in git for the `ralph` branch to inherit them.
