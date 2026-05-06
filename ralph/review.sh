@@ -102,8 +102,14 @@ COMMITS=$(git log "${COMPARE_REF}..HEAD" --format="%H%n%ad%n%B---" --date=short)
 
 prompt=$(cat ralph/review-prompt.md)
 
+# jq filter to extract streaming text from assistant messages — kept in sync
+# with afk.sh so both scripts render claude output identically.
+stream_text='select(.type == "assistant").message.content[]? | select(.type == "text").text // empty | gsub("\n"; "\r\n") | . + "\r\n\n"'
+
 claude \
+  --verbose \
   --print \
+  --output-format stream-json \
   "PRD ref: $PRD_REF
 Timestamp: $TIMESTAMP
 Range: $RANGE
@@ -116,4 +122,6 @@ $COMMITS
 
 ---
 Diff (${COMPARE_REF}...HEAD):
-$DIFF"
+$DIFF" \
+| grep --line-buffered '^{' \
+| jq --unbuffered -rj "$stream_text"
