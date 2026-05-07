@@ -40,8 +40,12 @@ if [ "$MAIN_BRANCH" = "$BASE_BRANCH" ]; then
     fi
   fi
 else
-  MAIN_COMPARE_REF="$BASE_BRANCH"
-  MAIN_COMMITS_AHEAD=$(git -C "$REPO_ROOT" rev-list --count "${MAIN_COMPARE_REF}..HEAD" 2>/dev/null || echo 0)
+  if ! git -C "$REPO_ROOT" rev-parse --verify --quiet "$BASE_BRANCH" >/dev/null 2>&1; then
+    MAIN_BASE_FAILURE="no-base-ref"
+  else
+    MAIN_COMPARE_REF="$BASE_BRANCH"
+    MAIN_COMMITS_AHEAD=$(git -C "$REPO_ROOT" rev-list --count "${MAIN_COMPARE_REF}..HEAD" 2>/dev/null || echo 0)
+  fi
 fi
 
 print_main_status() {
@@ -54,6 +58,9 @@ print_main_status() {
       ;;
     no-origin-ref)
       echo "  Main checkout ($REPO_ROOT): on base branch ${BASE_BRANCH}; origin/${BASE_BRANCH} ref not found locally — try 'git fetch origin'."
+      ;;
+    no-base-ref)
+      echo "  Main checkout ($REPO_ROOT): base branch '${BASE_BRANCH}' not found locally — check whether setup-skills picked the wrong base for this repo."
       ;;
     *)
       echo "  Main checkout ($REPO_ROOT): 0 commits ahead of ${BASE_BRANCH}."
@@ -81,6 +88,8 @@ else
     echo "Run ./ralph/once.sh, ./ralph/afk.sh <N>, or commit work directly, then re-run."
     exit 1
   fi
+  echo "Main checkout has nothing to review; falling back to AFK worktree."
+  print_main_status
   TARGET_PATH="$WORKTREE_PATH"
   TARGET_LABEL="AFK worktree at $WORKTREE_PATH"
   COMPARE_REF="$BASE_BRANCH"
@@ -108,11 +117,7 @@ prompt=$(cat ralph/review-prompt.md)
 # with afk.sh so both scripts render claude output identically.
 stream_text='select(.type == "assistant").message.content[]? | select(.type == "text").text // empty | gsub("\n"; "\r\n") | . + "\r\n\n"'
 
-claude \
-  --verbose \
-  --print \
-  --output-format stream-json \
-  "PRD ref: $PRD_REF
+prompt_arg="PRD ref: $PRD_REF
 Timestamp: $TIMESTAMP
 Range: $RANGE
 
@@ -124,6 +129,19 @@ $COMMITS
 
 ---
 Diff (${COMPARE_REF}...HEAD):
-$DIFF" \
+$DIFF"
+
+# `if !` lets the pipeline's failure surface a diagnostic instead of `set -e`
+# aborting silently — the most common case is grep finding zero JSON lines
+# because claude printed a banner/error to stdout instead of streamed events.
+if ! claude \
+  --verbose \
+  --print \
+  --output-format stream-json \
+  "$prompt_arg" \
 | grep --line-buffered '^{' \
-| jq --unbuffered -rj "$stream_text"
+| jq --unbuffered -rj "$stream_text"; then
+  echo "Error: claude streaming pipeline failed (no JSON output or non-zero exit)." >&2
+  echo "To debug, re-run claude directly: claude --print --output-format stream-json '<prompt>'" >&2
+  exit 1
+fi

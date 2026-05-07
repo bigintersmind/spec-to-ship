@@ -112,4 +112,4 @@ Single-context. See `docs/agents/domain.md`.
 
 ### AFK loop
 
-Installed at `ralph/`. Run `./ralph/afk.sh <N>` to loop on `ready-for-agent` tickets, or `./ralph/once.sh` for a single iteration. After the loop (or any other completion path — `once.sh`, hand work) exits, run `./ralph/review.sh <prd-ref>` to review the implementation against a PRD; the script auto-detects whether to review the main checkout or the AFK worktree. Worktree-isolated on the `ralph` branch.
+Installed at `ralph/`. Run `./ralph/afk.sh <N>` to loop on `ready-for-agent` tickets (worktree-isolated on the `ralph` branch), or `./ralph/once.sh` for a single iteration. After the loop (or any other completion path — `once.sh`, hand work) exits, run `./ralph/review.sh <prd-ref>` to review the implementation against a PRD; the script auto-detects which checkout to review (main wins when ahead of base; AFK worktree otherwise; on the base branch, unpushed commits are reviewed against `origin/<base>`) and streams claude output live.
