@@ -23,6 +23,11 @@ Consumer skills (`prd`, `issues`) talk in **stable verbs** like "publish to the 
 
 This is a prompt-driven skill, not a deterministic script. Explore, present what you found, confirm with the user, then write.
 
+This skill has two modes, picked by the argument:
+
+- **No argument** — install mode. Walk Sections A–D under "Process" below to scaffold the configuration from scratch. This is the existing behaviour.
+- **`update`** — update mode. Skip "Process" entirely; jump to ["Update mode"](#update-mode) and surface drift between the installed artifacts and the current upstream seeds. Recover install-time choices from the installed files rather than re-prompting.
+
 ## Process
 
 ### 1. Explore
@@ -204,3 +209,71 @@ Tell the user the setup is complete. Mention:
 - The `## Agent skills` block in CLAUDE.md is just an index pointing at those docs; don't put workflow content there directly.
 - If the AFK loop was installed: test it with `./ralph/once.sh` (single interactive iteration) before running `./ralph/afk.sh <N>` for the multi-iteration loop. The first afk.sh run creates the worktree at `<repo>-afk/`. After completion via any path (`afk.sh`, `once.sh`, hand work), run `./ralph/review.sh <prd-ref>` against any PRD whose children just shipped — it auto-detects which checkout to review (main wins when ahead of base; AFK worktree otherwise; on the base branch, unpushed commits are reviewed against `origin/<base>`), streams claude output live, and posts a structured five-question review comment on the PRD ticket. To clean up later: `git worktree remove <repo>-afk` and `git branch -D ralph` from the main checkout.
 - If this was an **incremental install** (i.e. `ralph/` already existed and was missing one or more files) and a `<repo>-afk` worktree from a prior `afk.sh` run exists, that worktree's `ralph` branch tip predates the newly-installed files — `review.sh` will fail there with "No such file or directory" trying to read `ralph/review-prompt.md`. Either rebase the `ralph` branch onto the base branch so it picks up the new files, or `git worktree remove <repo>-afk && git branch -D ralph` so the next `afk.sh` recreates them from a current base.
+
+## Update mode
+
+Reached via `/setup-skills update`. Surfaces drift between installed artifacts and the current upstream seeds, lets the user resolve drift per-file (take upstream / keep local / merge interactively), and prints a summary at the end.
+
+This slice covers `docs/agents/issue-tracker.md` only. Sibling work extends recovery and drift to `triage-labels.md`, `domain.md`, the `ralph/*` artifacts, and the `## Agent skills` index block; for now, scope update mode strictly to the one file below.
+
+Do **not** run any of Sections A–D in "Process". Update mode never re-prompts for tracker / labels / context layout — those are install-time user choices and silently flipping them would be a surprise.
+
+### 1. Subcommand dispatch
+
+If the user invoked `/setup-skills update`, you are in update mode. Continue with sub-step 2.
+
+If the argument is anything other than `update` or empty, say so and stop — don't guess. (Today, only `update` is recognised.)
+
+### 2. Configuration recovery
+
+For this slice the only recovered value is the **tracker selection**. Read the level-1 heading from `<repo-root>/docs/agents/issue-tracker.md` and map it to the matching upstream seed in this skill's directory:
+
+| Heading                           | Upstream seed              |
+| --------------------------------- | -------------------------- |
+| `# Issue tracker: bd (beads)`     | `issue-tracker-beads.md`   |
+| `# Issue tracker: GitHub`         | `issue-tracker-github.md`  |
+| `# Issue tracker: GitLab`         | `issue-tracker-gitlab.md`  |
+| `# Issue tracker: Local markdown` | `issue-tracker-local.md`   |
+
+Edge cases:
+
+- **Installed file missing** (`docs/agents/issue-tracker.md` doesn't exist): the repo never ran the install path. Tell the user to run `/setup-skills` (no argument) and stop.
+- **Heading missing or doesn't match** (corrupted file, "other" freeform tracker, hand-edited heading): say `I can't recover the install-time tracker choice from docs/agents/issue-tracker.md — please confirm the value or re-run /setup-skills from scratch.` and pause for direction. Do **not** fall back to live re-detection. (Fingerprint-based fallback for malformed headings is added in a sibling slice.)
+
+### 3. Drift detection
+
+For `docs/agents/issue-tracker.md`:
+
+1. Read the installed file at `<repo-root>/docs/agents/issue-tracker.md`.
+2. Read the upstream seed identified in sub-step 2.
+3. Compare them.
+4. Classify the file as **clean** (byte-identical) or **drifted** (any difference).
+
+The four `issue-tracker-*.md` seeds have no `__VAR__` placeholders, so plain compare is correct here. Substitution-aware diff machinery is added by a sibling slice for `ralph/` artifacts; do not invent it now.
+
+### 4. Per-file decision UX
+
+If the file is clean, skip to sub-step 5.
+
+If the file is drifted, walk this exact shape — one file at a time, never a bulk-decision dialog:
+
+1. **Header line.** Name the file and summarise the drift in one sentence: net line counts plus a short description of the primary change. Example:
+
+   > `docs/agents/issue-tracker.md` — upstream added 3 lines, removed 1; primary change: tightened wording on the "publish to the issue tracker" verb.
+
+2. **Diff.** Show the diff in chat. Non-negotiable: no decision is offered without it. Use a unified-diff format the user can read directly.
+
+3. **Three options**, labelled exactly as below — present them as a numbered list so the user can answer "1", "2", or "3":
+
+   - **Take upstream** — overwrite `docs/agents/issue-tracker.md` with the upstream seed. Before writing, surface a one-line warning: `Local customization will be lost.` Wait for explicit confirmation, then write.
+   - **Keep local** — leave the installed file untouched. Drift remains; the user has explicitly opted into it.
+   - **Merge interactively** — the diff is already loaded in this conversation. Ask the user, per region, which side to take (e.g. "take upstream's heading change, keep my added paragraph in the Conventions section"). Write the merged result. **Re-display the full merged file in chat** and wait for confirmation before treating it as final. If the user wants further edits, iterate before writing again.
+
+### 5. Summary
+
+Print a single short line:
+
+- If clean: `Update complete: docs/agents/issue-tracker.md is clean.`
+- If drifted-and-resolved: `` Update complete: docs/agents/issue-tracker.md — `<took upstream | kept local | merged interactively>`. ``
+
+Sibling work extends this into a full multi-line summary across every artifact; for this slice, one line is the whole report.
