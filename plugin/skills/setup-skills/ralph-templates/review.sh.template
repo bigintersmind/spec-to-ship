@@ -80,6 +80,12 @@ else
     echo "Run ./ralph/once.sh, ./ralph/afk.sh <N>, or commit work directly, then re-run."
     exit 1
   fi
+  if ! git -C "$WORKTREE_PATH" rev-parse --verify --quiet "$BASE_BRANCH" >/dev/null 2>&1; then
+    echo "Error: nothing to review."
+    print_main_status
+    echo "  AFK worktree ($WORKTREE_PATH): base branch '${BASE_BRANCH}' not found in worktree — check whether setup-skills picked the wrong base for this repo."
+    exit 1
+  fi
   WT_COMMITS_AHEAD=$(git -C "$WORKTREE_PATH" rev-list --count "${BASE_BRANCH}..HEAD" 2>/dev/null || echo 0)
   if [ "$WT_COMMITS_AHEAD" -eq 0 ]; then
     echo "Error: nothing to review."
