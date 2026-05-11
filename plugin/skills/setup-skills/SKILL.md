@@ -233,7 +233,7 @@ For this slice the only recovered value is the **tracker selection**. Read the l
 | `# Issue tracker: bd (beads)`     | `issue-tracker-beads.md`   |
 | `# Issue tracker: GitHub`         | `issue-tracker-github.md`  |
 | `# Issue tracker: GitLab`         | `issue-tracker-gitlab.md`  |
-| `# Issue tracker: Local markdown` | `issue-tracker-local.md`   |
+| `# Issue tracker: Local Markdown` | `issue-tracker-local.md`   |
 
 Edge cases:
 
