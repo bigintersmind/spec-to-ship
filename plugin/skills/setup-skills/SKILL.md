@@ -1,6 +1,6 @@
 ---
 name: setup-skills
-description: Sets up an `## Agent skills` index block in CLAUDE.md/AGENTS.md and per-repo reference docs in `docs/agents/` so the engineering skills know this repo's issue tracker (bd / beads, GitHub, GitLab, or local markdown), triage label vocabulary, and domain doc layout. Optionally also installs the AFK ("away from keyboard") loop in `ralph/` for autonomous ticket execution. Run before first use of `spec`, `prd`, or `issues` – or if those skills appear to be missing context about the issue tracker, triage labels, or domain docs – or to wire up the AFK loop.
+description: Sets up an `## Agent skills` index block in CLAUDE.md/AGENTS.md and per-repo reference docs in `docs/agents/` so the engineering skills know this repo's issue tracker (bd / beads, GitHub, GitLab, or local markdown), triage label vocabulary, and domain doc layout. Optionally also installs the AFK ("away from keyboard") loop in `ralph/` for autonomous ticket execution. Run before first use of `spec`, `prd`, or `issues` – or if those skills appear to be missing context about the issue tracker, triage labels, or domain docs – or to wire up the AFK loop – or to update an existing install against the current plugin output (run as `/setup-skills update`).
 disable-model-invocation: true
 ---
 
@@ -212,13 +212,13 @@ Tell the user the setup is complete. Mention:
 
 ## Update mode
 
-Reached via `/setup-skills update`. Surfaces drift between installed artifacts and the current upstream seeds, lets the user resolve drift per-file (take upstream / keep local / merge interactively), and prints a summary at the end.
+Reached via `/setup-skills update`. Surfaces drift between installed artifacts and the current upstream seeds, lets the user resolve drift per-file (take upstream / keep local / merge interactively), reports orphans (installed files with no upstream counterpart) with an ask-don't-delete prompt, reinstalls missing canonical seeds via the existing Section D logic, and prints a summary at the end.
 
 Update mode covers:
 
-- The three `docs/agents/*.md` files: `issue-tracker.md`, `triage-labels.md`, `domain.md`.
-- The `## Agent skills` index block in `CLAUDE.md` (or `AGENTS.md`).
-- The five `ralph/*` AFK-loop artifacts: `once.sh`, `afk.sh`, `prompt.md`, `review.sh`, `review-prompt.md` — only when the `ralph/` directory is present in the repo. When absent, skip the `ralph/*` set entirely (no error, no prompt). The index-block diff still runs.
+- **Drift detection** on the three `docs/agents/*.md` files (`issue-tracker.md`, `triage-labels.md`, `domain.md`), the `## Agent skills` index block in `CLAUDE.md` (or `AGENTS.md`), and the five `ralph/*` AFK-loop artifacts (`once.sh`, `afk.sh`, `prompt.md`, `review.sh`, `review-prompt.md`) when `ralph/` is present in the repo. When `ralph/` is absent, skip the `ralph/*` set entirely (no error, no prompt); the index-block and `docs/agents/` diffs still run.
+- **Orphan detection** on direct children of installed `docs/agents/` and (when present) `ralph/`: any file whose name is not in the canonical seed list (see sub-step 3f) is flagged for the user with a per-file keep-or-delete prompt. Update mode never auto-deletes.
+- **Missing-seed detection** on the canonical `ralph/*` set (only when `ralph/` is present): any canonical seed with no installed counterpart is reinstalled by reusing Section D's incremental-install logic. The user is informed of each file added; no per-file decision.
 
 Do **not** run any of Sections A–D in "Process". Update mode never re-prompts for tracker / labels / context layout — those are install-time user choices and silently flipping them would be a surprise. Install-time *measurements* (base branch, test commands) are re-detected from the live repo in sub-step 2d so genuine repo changes propagate.
 
@@ -284,6 +284,8 @@ When a recovery step above hits the failure cases described in 2a / 2b / 2c, sur
 
 Do **not** fall back to live re-detection of tracker / labels / context layout. Wait for the user to either confirm a value (in which case continue update mode with that value) or exit.
 
+When the user supplies a value and update mode continues, **record the file path and a one-line description of how recovery succeeded** (e.g. `recovered after the user re-supplied the <field> mapping`). The list of recovery warnings is consumed in sub-step 5's `Warnings:` block at the bottom of the summary; omit that block when no warnings fired.
+
 #### 2d. Re-detect install-time measured values
 
 The `ralph/*` artifacts ship as templates carrying three `__VAR__` placeholders that the install path substitutes from live repo state. Update mode re-runs that detection so genuine repo changes (a renamed default branch, a newly added `lint` script) flow through to the drift comparison.
@@ -334,6 +336,8 @@ Compare the trimmed seed against the installed file.
 
 Skip this entire sub-step when `ralph/` does not exist in the repo (no error, no prompt). When it does, compare each of the five files below.
 
+If an expected `ralph/*` file is missing on disk, do **not** classify it as drift here — defer it to sub-step 3g (missing-seed detection), which will reinstall it via Section D's incremental-install logic.
+
 Pair each installed file with the matching template from this skill's `ralph-templates/` directory:
 
 | Installed file          | Upstream template                                  |
@@ -375,11 +379,34 @@ Pick the host file the same way step 4 does:
 Extract the installed block: from the line `## Agent skills` (inclusive) up to the next `## ` heading or end-of-file (exclusive). Build the **canonical block** by combining:
 
 1. The three fixed `### Issue tracker` / `### Triage labels` / `### Domain docs` subsections from step 4, with their `[One-line summary]` placeholders left as-is in the canonical (see filter below).
-2. The `### AFK loop` subsection from step 4 — included only when `ralph/` exists in the repo, omitted otherwise. If installed has an `### AFK loop` subsection but `ralph/` doesn't exist, that surfaces as drift (the section is now extra); slice #25 handles the cleanup decision.
+2. The `### AFK loop` subsection from step 4 — included only when `ralph/` exists in the repo, omitted otherwise. If installed has an `### AFK loop` subsection but `ralph/` doesn't exist, that surfaces as drift (the section is now extra) and the user resolves it via the standard three-option UX in sub-step 4.
 
 Apply a **summary-line filter** before classifying drift: each subsection's content line has the shape `<one-line summary>. See \`docs/agents/<file>\`.`. Treat the `<one-line summary>` (everything before `. See `) as a wildcard for the purpose of drift detection — users customize that prose during install, and re-running update mode shouldn't reclassify those customizations as drift. The `See \`docs/agents/<file>\`.` pointer and every heading line are compared exactly. The `### AFK loop` subsection's full paragraph is compared exactly (no wildcard there).
 
 Classify the index block as **clean** when, after the filter, no lines differ. Otherwise **drifted** — show the diff with the user's actual summary prose visible, not the wildcard.
+
+#### 3f. Orphan detection
+
+Catalog installed files in `docs/agents/` and (when present) `ralph/` that have no corresponding upstream seed. Reported in sub-step 4 with an ask-don't-delete prompt; never auto-deleted.
+
+Build the **canonical filename set** the same way sub-step 3 pairs installed files with seeds:
+
+- `docs/agents/`: `issue-tracker.md`, `triage-labels.md`, `domain.md`.
+- `ralph/` (only when `ralph/` exists in the repo): `once.sh`, `afk.sh`, `prompt.md`, `review.sh`, `review-prompt.md`.
+
+Walk the **direct children** of each installed directory. For each regular file whose name is not in the canonical set, record it as an orphan with its full repo-relative path. Subdirectories (and any files inside them) are skipped — out of scope this run.
+
+If `ralph/` doesn't exist, only the `docs/agents/` walk runs (sub-step 2 already guaranteed the directory exists with the three canonical files inside; orphans there are anything extra the user has added).
+
+The resulting orphan list — possibly empty — is consumed in sub-step 4 and counted in sub-step 5.
+
+#### 3g. Missing-seed detection
+
+Catalog canonical seeds for which no installed counterpart exists. Today this is `ralph/*`-scoped: sub-step 2 exits early if any of the three `docs/agents/*.md` files is missing, so the `docs/agents/` side of the canonical seed list never has missing entries at this point.
+
+Skip this sub-step entirely when `ralph/` doesn't exist in the repo. When it does, for each canonical `ralph/*` entry (`once.sh`, `afk.sh`, `prompt.md`, `review.sh`, `review-prompt.md`), check whether the matching installed file is present. Record missing entries.
+
+The resulting missing-seed list — possibly empty — is consumed in sub-step 4: each missing seed is reinstalled by reusing Section D's incremental-install logic (read the matching `ralph-templates/*.template`, substitute the placeholders re-detected in 2d, write to `ralph/`, then `chmod +x` for shell scripts). No per-file user decision; the user is informed which files were added in sub-step 4 and counted in sub-step 5.
 
 ### 4. Per-file decision UX
 
@@ -411,9 +438,53 @@ For each **clean** artifact, skip to the next. For each **drifted** artifact, wa
    - **Keep local** — leave the installed artifact untouched. Drift remains; the user has explicitly opted into it.
    - **Merge interactively** — the diff is already loaded in this conversation. Ask the user, per region, which side to take (e.g. "take upstream's heading change, keep my added paragraph in the Conventions section"). Write the merged result. **Re-display the full merged artifact in chat** and wait for confirmation before treating it as final. If the user wants further edits, iterate before writing again. For the index block, the merged result replaces the `## Agent skills` block in-place; everything else in the host file is preserved.
 
+After the nine-artifact drift walk completes, walk the **orphan list** from sub-step 3f, then the **missing-seed list** from sub-step 3g — in that order, so the user resolves contested per-file decisions before the loop announces any unilateral file additions.
+
+**Orphan walk.** For each orphan recorded in 3f, one at a time:
+
+1. **Header line.** Name the orphan by repo-relative path and state that no upstream seed corresponds to it. Example:
+
+   > `docs/agents/glossary.md` — no upstream seed; this file is either a manual addition or a removed-upstream seed.
+
+2. **Two options**, labelled exactly as below — present them as a numbered list so the user can answer "1" or "2":
+
+   - **Keep** — leave the file untouched. The orphan stays in place; counted as flagged-and-kept in the summary.
+   - **Delete** — request explicit per-file confirmation before removing: `Delete <path>? This cannot be undone. [y/N]`. Default is no. Only on an affirmative reply does the file get removed; counted as flagged-and-deleted in the summary.
+
+   Never auto-delete; deletion is always an explicit per-file action requested by the user, even when "delete" is the chosen option.
+
+**Missing-seed walk.** For each missing seed recorded in 3g:
+
+1. Announce the install in one line, e.g. `Installing missing ralph/review.sh from upstream seed.`
+2. Run the same write logic Section D's incremental-install path uses for that file: read `<this-skill-dir>/ralph-templates/<file>.template` (for `ralph/afk.sh`, pick the variant matching the tracker recovered in 2a), substitute the `__VAR__` placeholders from 2d, write to `ralph/<file>`, then `chmod +x` for shell scripts (`once.sh`, `afk.sh`, `review.sh`).
+3. No per-file decision is offered — the missing-seed contract is "the canonical seed is what's installed". Users who want to opt out of an artifact can delete it after the run (the next update would re-flag it as missing; that's the expected feedback loop until install-state tracking lands as a future enhancement — see PRD #21's Out-of-Scope section).
+
 ### 5. Summary
 
-Print one line per artifact in the same stable order from sub-step 4, skipping any that didn't apply this run (`ralph/*` lines are omitted when ralph/ is absent; the index-block line is omitted when no host file exists). Each per-artifact line is either `clean` or the chosen resolution (`took upstream` / `kept local` / `merged interactively`). End with a single trailing total counting clean vs drifted-and-resolved across all artifacts that ran:
+Print a two-part summary at the end of every run: a per-artifact line list followed by a multi-line totals block.
+
+**Per-artifact lines.** Print the canonical artifacts first in the stable order from sub-step 4 (skipping any that didn't apply this run — `ralph/*` lines omitted when ralph/ is absent; the index-block line omitted when no host file exists). Each canonical line is either `clean`, the chosen drift resolution (`took upstream` / `kept local` / `merged interactively`), or the missing-seed disposition (`missing — installed`). After the canonical artifacts, list orphans in the order they were walked in sub-step 4, each as `orphan (kept)` or `orphan (deleted)`.
+
+**Totals block.** Five lines under an `Update complete:` header. Counts cover only the artifacts that actually ran this invocation:
+
+```
+Update complete:
+  - <C> clean
+  - <D> drifted: <T> took upstream, <K> kept local, <M> merged interactively
+  - <O> orphans flagged (none deleted unless explicitly confirmed; <X> deleted on user request)
+  - <S> missing seeds installed
+```
+
+Counts:
+
+- **`<C>` clean** — artifacts classified clean in sub-step 3 (drift detection plus index block).
+- **`<D>` drifted** — total = `<T>` + `<K>` + `<M>`. Each per-choice count reflects how the user resolved a drifted artifact in sub-step 4.
+- **`<O>` orphans flagged** — total orphan count from sub-step 3f. The "(none deleted unless explicitly confirmed; `<X>` deleted on user request)" footnote makes the always-confirm contract visible in the summary. Use exactly `none deleted unless explicitly confirmed; 0 deleted on user request` when `<X>` is zero.
+- **`<S>` missing seeds installed** — count of files written by the missing-seed walk in sub-step 4.
+
+**Warnings block (conditional).** If any malformed-file recovery warning fired in sub-step 2's "I can't recover" path and the user supplied a value to continue, append a `Warnings:` block listing each warning by file path, one per line, after the totals. Omit the block when no warnings fired.
+
+Worked example with mixed outcomes:
 
 ```
 docs/agents/issue-tracker.md: clean
@@ -423,9 +494,17 @@ docs/agents/domain.md: kept local
 ralph/once.sh: clean
 ralph/afk.sh: took upstream
 ralph/prompt.md: merged interactively
-ralph/review.sh: clean
+ralph/review.sh: missing — installed
 ralph/review-prompt.md: clean
-Update complete: 6 clean, 3 drifted-and-resolved.
-```
+docs/agents/glossary.md: orphan (kept)
+ralph/my-helper.sh: orphan (deleted)
 
-Sibling work extends this into a richer multi-line summary (per-choice counts, orphan / missing-seed reporting); for this slice, one line per artifact plus the total is the whole report.
+Update complete:
+  - 5 clean
+  - 3 drifted: 1 took upstream, 1 kept local, 1 merged interactively
+  - 2 orphans flagged (none deleted unless explicitly confirmed; 1 deleted on user request)
+  - 1 missing seed installed
+
+Warnings:
+  - docs/agents/triage-labels.md: recovered after the user re-supplied the `ready-for-agent` label mapping
+```
