@@ -214,7 +214,7 @@ Tell the user the setup is complete. Mention:
 
 Reached via `/setup-skills update`. Surfaces drift between installed artifacts and the current upstream seeds, lets the user resolve drift per-file (take upstream / keep local / merge interactively), and prints a summary at the end.
 
-This slice covers `docs/agents/issue-tracker.md` only. Sibling work extends recovery and drift to `triage-labels.md`, `domain.md`, the `ralph/*` artifacts, and the `## Agent skills` index block; for now, scope update mode strictly to the one file below.
+This slice covers all three `docs/agents/*.md` files (`issue-tracker.md`, `triage-labels.md`, `domain.md`). Sibling work extends recovery and drift to the `ralph/*` artifacts and the `## Agent skills` index block; for now, scope update mode strictly to those three files.
 
 Do **not** run any of Sections A–D in "Process". Update mode never re-prompts for tracker / labels / context layout — those are install-time user choices and silently flipping them would be a surprise.
 
@@ -226,7 +226,11 @@ If the argument is anything other than `update` or empty, say so and stop — do
 
 ### 2. Configuration recovery
 
-For this slice the only recovered value is the **tracker selection**. Read the level-1 heading from `<repo-root>/docs/agents/issue-tracker.md` and map it to the matching upstream seed in this skill's directory:
+Recover three install-time choices, one per `docs/agents/*.md` file. Never re-detect any of them from live repo state — that would silently flip a decision the user made at install time. If any of the three files is **missing**, tell the user to run `/setup-skills` (no argument) and stop. If any of the three files is **present but unparseable** through the rules below, route to the "I can't recover" path at the bottom of this sub-step.
+
+#### 2a. Tracker selection (from `docs/agents/issue-tracker.md`)
+
+Read the level-1 heading and map it to the matching upstream seed:
 
 | Heading                           | Upstream seed              |
 | --------------------------------- | -------------------------- |
@@ -235,45 +239,95 @@ For this slice the only recovered value is the **tracker selection**. Read the l
 | `# Issue tracker: GitLab`         | `issue-tracker-gitlab.md`  |
 | `# Issue tracker: Local Markdown` | `issue-tracker-local.md`   |
 
-Edge cases:
+**Fingerprint fallback** when the heading is missing, malformed, or not in the table above (corrupted file, "other" freeform tracker, hand-edited heading): scan the installed file's body for a tracker-specific CLI fingerprint:
 
-- **Installed file missing** (`docs/agents/issue-tracker.md` doesn't exist): the repo never ran the install path. Tell the user to run `/setup-skills` (no argument) and stop.
-- **Heading missing or doesn't match** (corrupted file, "other" freeform tracker, hand-edited heading): say `I can't recover the install-time tracker choice from docs/agents/issue-tracker.md — please confirm the value or re-run /setup-skills from scratch.` and pause for direction. Do **not** fall back to live re-detection. (Fingerprint-based fallback for malformed headings is added in a sibling slice.)
+| Fingerprint substring (any occurrence)             | Tracker  |
+| -------------------------------------------------- | -------- |
+| `bd create`, `bd ready`, `bd dep`, or `.beads/`    | beads    |
+| `gh issue` or `gh label`                           | github   |
+| `glab issue`                                       | gitlab   |
+| `.scratch/`                                        | local    |
+
+If fingerprints for exactly one tracker appear, recover that tracker. If fingerprints for zero or multiple trackers appear (ambiguous), route to the "I can't recover" path.
+
+#### 2b. Triage label vocabulary (from `docs/agents/triage-labels.md`)
+
+Parse the right-hand column of the three tables (`## Kind roles`, `## Category roles`, `## State roles`) to recover the user's mapping for the eight canonical roles:
+
+- Kind: `prd`
+- Category: `bug`, `enhancement`
+- State: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`
+
+For each table, find the row whose **first column** matches the canonical role (the role name appears in backticks, e.g. `` `bug` ``) and capture the **second column** verbatim (the user's label string, also typically in backticks). If any of the eight canonical roles can't be located — table missing, row missing, columns malformed — route to the "I can't recover" path.
+
+The resulting eight-entry mapping is the substitution input for sub-step 3b.
+
+#### 2c. Single-vs-multi-context (from `docs/agents/domain.md`)
+
+Read the `## File structure` section of the installed file and detect the shape from its fenced code block(s):
+
+- If a tree block mentions `CONTEXT-MAP.md` → **multi-context**.
+- If a tree block has `CONTEXT.md` at the root and no `CONTEXT-MAP.md` → **single-context**.
+- If the section is missing, contains no recognisable tree block, or contains a tree that fits neither shape → route to the "I can't recover" path.
+
+#### "I can't recover" path
+
+When a recovery step above hits the failure cases described in 2a / 2b / 2c, surface this exact message and pause for direction (substituting `<file>` with the offending path):
+
+> I can't recover the install-time choice for `<file>` — please confirm the value or re-run `/setup-skills` from scratch.
+
+Do **not** fall back to live re-detection of tracker / labels / context layout. Wait for the user to either confirm a value (in which case continue update mode with that value) or exit.
 
 ### 3. Drift detection
 
-For `docs/agents/issue-tracker.md`:
+For each of the three `docs/agents/*.md` files, build a **substituted upstream** using the recovered choice, then compare against the installed file. Classify per-file as **clean** (byte-identical) or **drifted** (any difference).
 
-1. Read the installed file at `<repo-root>/docs/agents/issue-tracker.md`.
-2. Read the upstream seed identified in sub-step 2.
-3. Compare them.
-4. Classify the file as **clean** (byte-identical) or **drifted** (any difference).
+#### 3a. `docs/agents/issue-tracker.md`
 
-The four `issue-tracker-*.md` seeds have no `__VAR__` placeholders, so plain compare is correct here. Substitution-aware diff machinery is added by a sibling slice for `ralph/` artifacts; do not invent it now.
+The upstream is the seed identified in 2a. The four `issue-tracker-*.md` seeds have no `__VAR__` placeholders, so the substituted upstream is just the seed verbatim — plain compare against the installed file.
+
+#### 3b. `docs/agents/triage-labels.md`
+
+Start from the upstream `triage-labels.md` seed in this skill's directory. For each of the eight canonical roles recovered in 2b, find the matching row in the seed (its first column is the canonical role in backticks) and replace its **second column** with the user's recovered value, preserving the row's column widths so the substituted seed still parses as a valid markdown table. The first column (canonical role) and the third column (meaning) are not modified.
+
+Compare the substituted seed against the installed file.
+
+#### 3c. `docs/agents/domain.md`
+
+Start from the upstream `domain.md` seed in this skill's directory. Trim it to match the shape recovered in 2c:
+
+- **Single-context**: drop the `CONTEXT-MAP.md` bullet from `## Before exploring, read these`; drop the "In multi-context repos..." sub-clause from the remaining `docs/adr/` bullet (keep the rest of that bullet intact); in `## File structure`, change "Single-context repo (most repos):" to "Single-context repo:"; remove the entire "Multi-context repo" subsection (its heading line and the code fence beneath it, plus the blank line separating them).
+- **Multi-context**: keep the three bullets of `## Before exploring, read these` as-is; in `## File structure`, remove the "Single-context repo (most repos):" heading and the code fence beneath it (keep only the multi-context tree, with its heading line trimmed to "Multi-context repo:" — i.e. drop the "(presence of `CONTEXT-MAP.md` at the root)" parenthetical the way single-context trims the "(most repos)" parenthetical).
+
+Compare the trimmed seed against the installed file.
+
+Substitution-aware diff machinery for `__VAR__` placeholders is added by a sibling slice for `ralph/` artifacts; do not invent it now.
 
 ### 4. Per-file decision UX
 
-If the file is clean, skip to sub-step 5.
-
-If the file is drifted, walk this exact shape — one file at a time, never a bulk-decision dialog:
+Walk the three files in this stable order: `issue-tracker.md`, then `triage-labels.md`, then `domain.md`. For each **clean** file, skip to the next. For each **drifted** file, walk this exact shape — one file at a time, never a bulk-decision dialog:
 
 1. **Header line.** Name the file and summarise the drift in one sentence: net line counts plus a short description of the primary change. Example:
 
-   > `docs/agents/issue-tracker.md` — upstream added 3 lines, removed 1; primary change: tightened wording on the "publish to the issue tracker" verb.
+   > `docs/agents/triage-labels.md` — upstream added 2 lines, removed 0; primary change: clarified the meaning column for `ready-for-agent`.
 
 2. **Diff.** Show the diff in chat. Non-negotiable: no decision is offered without it. Use a unified-diff format the user can read directly.
 
 3. **Three options**, labelled exactly as below — present them as a numbered list so the user can answer "1", "2", or "3":
 
-   - **Take upstream** — overwrite `docs/agents/issue-tracker.md` with the upstream seed. Before writing, surface a one-line warning: `Local customization will be lost.` Wait for explicit confirmation, then write.
+   - **Take upstream** — overwrite the installed file with the substituted upstream. Before writing, surface a one-line warning: `Local customization will be lost.` Wait for explicit confirmation, then write.
    - **Keep local** — leave the installed file untouched. Drift remains; the user has explicitly opted into it.
    - **Merge interactively** — the diff is already loaded in this conversation. Ask the user, per region, which side to take (e.g. "take upstream's heading change, keep my added paragraph in the Conventions section"). Write the merged result. **Re-display the full merged file in chat** and wait for confirmation before treating it as final. If the user wants further edits, iterate before writing again.
 
 ### 5. Summary
 
-Print a single short line:
+Print one line per file in the same stable order, plus a single trailing total. Each per-file line is either `clean` or the chosen resolution (`took upstream` / `kept local` / `merged interactively`):
 
-- If clean: `Update complete: docs/agents/issue-tracker.md is clean.`
-- If drifted-and-resolved: `` Update complete: docs/agents/issue-tracker.md — `<took upstream | kept local | merged interactively>`. ``
+```
+docs/agents/issue-tracker.md: clean
+docs/agents/triage-labels.md: took upstream
+docs/agents/domain.md: kept local
+Update complete: 1 clean, 2 drifted-and-resolved.
+```
 
-Sibling work extends this into a full multi-line summary across every artifact; for this slice, one line is the whole report.
+Sibling work extends this into a multi-line summary across additional artifacts (`ralph/*`, the index block, per-choice counts, orphan / missing-seed reporting); for this slice, three per-file lines plus the total is the whole report.
