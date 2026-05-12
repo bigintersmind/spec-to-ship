@@ -307,7 +307,7 @@ Do this only if `ralph/` exists in the repo — otherwise the values aren't need
     - If nothing detected, use the placeholder bullet `- _TODO: maintainer should add this project's verification commands here_`.
     Assemble the result as a bullet list with the same shape Section D writes.
 
-If the recovered tracker is "other" (freeform), `ralph/` shouldn't be installed (Section D skips the install for "other" trackers). If `ralph/` exists alongside an "other" tracker the user installed manually, skip the `ralph/*` drift comparison and note it under "Out of scope this run" — the same posture Section D takes.
+If the recovered tracker is "other" (freeform), `ralph/` shouldn't be installed (Section D skips the install for "other" trackers). If `ralph/` exists alongside an "other" tracker the user installed manually, skip the `ralph/*` drift comparison silently — there's no `afk.sh.<tracker>.template` to substitute against, so update mode has no upstream baseline. The `ralph/*` lines are simply absent from sub-step 5's per-artifact summary, the same way they are when `ralph/` doesn't exist at all. Record a recovery-style warning (`ralph/`: skipped — "other" tracker has no upstream template) so the user sees it in sub-step 5's `Warnings:` block.
 
 ### 3. Drift detection
 
@@ -374,7 +374,7 @@ Pick the host file the same way step 4 does:
 
 - If `CLAUDE.md` exists, the block lives there.
 - Else if `AGENTS.md` exists, the block lives there.
-- If neither exists, treat the block as missing — report drift "no host file present" and offer the user the chance to delegate to install mode (out of scope for this slice; advise re-running `/setup-skills` without arguments).
+- If neither exists, skip the index-block diff entirely — there's no installed block to compare against, so "drift" doesn't apply. The index-block line is omitted from sub-step 5's per-artifact summary (the same skip rule sub-step 4 uses). Record a warning (`## Agent skills` block: no host file — re-run `/setup-skills` without arguments to recreate it) so the user sees it in sub-step 5's `Warnings:` block; this case is a corrupted or partial install, not normal drift.
 
 Extract the installed block: from the line `## Agent skills` (inclusive) up to the next `## ` heading or end-of-file (exclusive). Build the **canonical block** by combining:
 
@@ -456,7 +456,7 @@ After the nine-artifact drift walk completes, walk the **orphan list** from sub-
 **Missing-seed walk.** For each missing seed recorded in 3g:
 
 1. Announce the install in one line, e.g. `Installing missing ralph/review.sh from upstream seed.`
-2. Run the same write logic Section D's incremental-install path uses for that file: read `<this-skill-dir>/ralph-templates/<file>.template` (for `ralph/afk.sh`, pick the variant matching the tracker recovered in 2a), substitute the `__VAR__` placeholders from 2d, write to `ralph/<file>`, then `chmod +x` for shell scripts (`once.sh`, `afk.sh`, `review.sh`).
+2. Run the same write logic Section D's incremental-install path uses for that file: read `<this-skill-dir>/ralph-templates/<file>.template` (for `ralph/afk.sh`, pick the variant matching the tracker recovered in 2a), substitute the `__VAR__` placeholders from 2d, write to `ralph/<file>`, then `chmod +x` if Section D's step 4 lists this file in its chmod set. Don't duplicate the chmod list here — defer to Section D so the two stay in sync if a future template ships.
 3. No per-file decision is offered — the missing-seed contract is "the canonical seed is what's installed". Users who want to opt out of an artifact can delete it after the run (the next update would re-flag it as missing; that's the expected feedback loop until install-state tracking lands as a future enhancement — see PRD #21's Out-of-Scope section).
 
 ### 5. Summary
@@ -482,7 +482,11 @@ Counts:
 - **`<O>` orphans flagged** — total orphan count from sub-step 3f. The "(none deleted unless explicitly confirmed; `<X>` deleted on user request)" footnote makes the always-confirm contract visible in the summary. Use exactly `none deleted unless explicitly confirmed; 0 deleted on user request` when `<X>` is zero.
 - **`<S>` missing seeds installed** — count of files written by the missing-seed walk in sub-step 4.
 
-**Warnings block (conditional).** If any malformed-file recovery warning fired in sub-step 2's "I can't recover" path and the user supplied a value to continue, append a `Warnings:` block listing each warning by file path, one per line, after the totals. Omit the block when no warnings fired.
+**Warnings block (conditional).** If any of these fired during the run, append a `Warnings:` block listing each warning on its own line, after the totals — omit the block when none fired:
+
+- Malformed-file recovery from sub-step 2's "I can't recover" path, where the user supplied a value to continue.
+- The "other"-tracker-with-`ralph/`-present case from sub-step 2d, where the `ralph/*` drift comparison was skipped for lack of an upstream template.
+- The "no host file" case from sub-step 3e, where neither `CLAUDE.md` nor `AGENTS.md` exists so the index-block diff was skipped.
 
 Worked example with mixed outcomes:
 
@@ -500,8 +504,8 @@ docs/agents/glossary.md: orphan (kept)
 ralph/my-helper.sh: orphan (deleted)
 
 Update complete:
-  - 5 clean
-  - 3 drifted: 1 took upstream, 1 kept local, 1 merged interactively
+  - 4 clean
+  - 4 drifted: 2 took upstream, 1 kept local, 1 merged interactively
   - 2 orphans flagged (none deleted unless explicitly confirmed; 1 deleted on user request)
   - 1 missing seed installed
 
