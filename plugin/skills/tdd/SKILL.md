@@ -1,6 +1,6 @@
 ---
 name: tdd
-description: Test-driven development discipline — vertical-slice tracer bullets (one test, one implementation, repeat), tests against public interfaces not implementation details, deep modules, mock only at system boundaries. Use whenever the user asks to write tests first, follow TDD, implement a slice with test coverage, or when a higher-level loop (an AFK ticket worker, an /issues slice) is implementing a feature that needs tests. Triggers on phrases like "use TDD", "tdd this", "write the test first", "test-driven", "implement with tests".
+description: Use when implementing a feature or slice that needs tests, when the user asks to write tests first or follow TDD, or when a higher-level loop (an AFK ticket worker, an /issues slice) reaches implementation and needs test coverage. Triggers on phrases like "use TDD", "tdd this", "write the test first", "test-driven", "implement with tests".
 ---
 
 # Test-Driven Development
