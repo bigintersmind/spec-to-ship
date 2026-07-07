@@ -1,6 +1,6 @@
 ---
 name: diagnose
-description: A discipline for hard bugs — build a fast deterministic feedback loop first, then reproduce, hypothesize 3-5 ranked alternatives, instrument with tagged debug logs, fix with a regression test at the right seam, and post-mortem. Use whenever the user is debugging something difficult, can't reproduce reliably, asks for help finding a root cause, suspects a flaky test, or when an AFK loop picks up a `bug`-categorized ticket. Triggers on phrases like "diagnose", "debug this", "find the root cause", "why is X failing", "this is flaky", "I can't reproduce".
+description: Use for hard bugs — when the user is debugging something difficult, can't reproduce reliably, asks for help finding a root cause, suspects a flaky test, or when an AFK loop picks up a `bug`-categorized ticket. Triggers on phrases like "diagnose", "debug this", "find the root cause", "why is X failing", "this is flaky", "I can't reproduce".
 ---
 
 # Diagnose

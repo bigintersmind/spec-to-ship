@@ -123,8 +123,10 @@ The plugin is nested under `plugin/` because marketplace install copies only the
 This is a workflow built from the author's day-to-day; collaborators are welcome to file issues or PRs proposing refinements. Keep skills:
 
 - **Single-purpose** — one stage of the workflow per skill.
-- **Triggerable** — the description should make it obvious when Claude should invoke it.
+- **Triggerable** — the description should make it obvious when Claude should invoke it, and describe *when* to fire rather than summarizing the workflow.
 - **Boundary-respecting** — `spec` interviews, `prd` writes, `issues` decomposes; resist letting one skill bleed into the next.
+
+See [`docs/skill-craft.md`](docs/skill-craft.md) for the house style — description discipline, matching the guidance form to the failure type, and where this set deliberately diverges from heavier skill collections.
 
 ## License
 
