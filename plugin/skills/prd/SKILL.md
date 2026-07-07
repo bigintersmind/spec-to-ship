@@ -15,8 +15,8 @@ If the conversation lacks alignment on the feature itself, recommend `/spec` fir
 
 This skill speaks in stable verbs — "publish to the issue tracker", "apply the `prd` triage label". The concrete behavior for *this* repo lives in two files:
 
-- `docs/agents/issue-tracker.md` – defines the tracker (GitHub, GitLab, local markdown, or other) and the CLI/file-write conventions for each verb
-- `docs/agents/triage-labels.md` – maps the canonical roles (including `prd`) to the actual label strings this repo uses
+- `docs/agents/issue-tracker.md` — defines the tracker (GitHub, GitLab, local markdown, or other) and the CLI/file-write conventions for each verb
+- `docs/agents/triage-labels.md` — maps the canonical roles (including `prd`) to the actual label strings this repo uses
 
 Read both files before doing any tracker operations. If either is missing, tell the user to run `/setup-skills` first and stop.
 
@@ -30,7 +30,7 @@ Explore the repo to understand the current state of the code, if you haven't alr
 
 Sketch the major modules you will need to build or modify. Actively look for opportunities to extract deep modules — modules that encapsulate substantial functionality behind a simple, testable interface that rarely changes — over shallow ones.
 
-Then walk the user through these questions **one at a time** – present, get an answer, move on:
+Then walk the user through these questions **one at a time** — present, get an answer, move on:
 
 1. Does the proposed module decomposition match your expectations?
 2. Which of these modules do you want tests written for?
