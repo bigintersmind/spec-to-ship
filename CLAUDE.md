@@ -91,7 +91,7 @@ The contract between `triage` and the AFK loop is the **agent brief** comment, d
 
 ## Conventions when editing skills
 
-The house style and the reasoning behind it live in [`docs/skill-craft.md`](docs/skill-craft.md); the essentials:
+Two docs carry the reasoning: [`docs/skill-craft.md`](docs/skill-craft.md) for *how to write a skill* (the house style), and [`docs/design-principles.md`](docs/design-principles.md) for *whether a piece of surface area should exist at all* — read the latter before adding a flag, a config step, a trigger phrase, or a new skill; its "when in doubt" rubric is the gatekeeper. The essentials of the house style:
 
 - The `description` field is the auto-invocation signal, so it lists trigger phrases verbatim — but it describes *when* to fire, not *how* the skill works. Don't summarize the workflow in the description; agents act from it and skip the body. Extending a skill's scope means updating the trigger phrases, not adding process detail.
 - A skill that depends on per-repo config should read the relevant `docs/agents/*.md` files and **stop with a pointer to `/setup-skills` if missing**, rather than guessing.

@@ -1,6 +1,6 @@
 # Skill craft
 
-How the skills in this repo are written, and the theory behind the choices. If you're adding or editing a skill under `plugin/skills/`, this is the house style.
+How the skills in this repo are written, and the theory behind the choices. If you're adding or editing a skill under `plugin/skills/`, this is the house style. For the prior question — *whether* a piece of surface area (a flag, a config step, a new skill) should exist at all — see [`design-principles.md`](design-principles.md).
 
 The short version: **these skills are deliberately lean.** Every principle below serves a set that reads as if one hand wrote it — legible, single-purpose, calibrated. Where a heavier, more defensive style genuinely helps, we reach for it *surgically*, not by default. Restraint is the point, not an accident of being unfinished.
 
