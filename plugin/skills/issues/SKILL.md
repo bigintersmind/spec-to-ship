@@ -13,8 +13,8 @@ Break a plan into independently-grabbable issues using vertical slices (tracer b
 
 This skill speaks in stable verbs — "publish to the issue tracker", "fetch the relevant ticket", "apply the `needs-triage` triage label". The concrete behavior for *this* repo lives in two files:
 
-- `docs/agents/issue-tracker.md` – defines the tracker (GitHub, GitLab, local markdown, or other) and the CLI/file-write conventions for each verb
-- `docs/agents/triage-labels.md` – maps the canonical role `needs-triage` to the actual label string this repo uses
+- `docs/agents/issue-tracker.md` — defines the tracker (GitHub, GitLab, local markdown, or other) and the CLI/file-write conventions for each verb
+- `docs/agents/triage-labels.md` — maps the canonical role `needs-triage` to the actual label string this repo uses
 
 Read both files before doing any tracker operations. If either is missing, tell the user to run `/setup-skills` first and stop.
 
@@ -40,21 +40,21 @@ Break the plan into **tracer bullet** issues. Each issue is a thin vertical slic
 
 **HITL vs AFK classification.** Each slice is either:
 
-- **AFK** – an agent can implement and merge this without human interaction. The acceptance criteria are fully specified, the design decisions are settled, and verification is automatable (tests, type checks, lint).
-- **HITL** – requires a human in the loop. Use this when the slice involves an architectural decision not yet made, a design or UX review, a security/privacy judgment call, an irreversible change (data migration, public API), or any step where "looks right" is the verification.
+- **AFK** — an agent can implement and merge this without human interaction. The acceptance criteria are fully specified, the design decisions are settled, and verification is automatable (tests, type checks, lint).
+- **HITL** — requires a human in the loop. Use this when the slice involves an architectural decision not yet made, a design or UX review, a security/privacy judgment call, an irreversible change (data migration, public API), or any step where "looks right" is the verification.
 
-Prefer AFK over HITL where possible, but do not optimistically mark something AFK to keep the autonomous loop fed. A wrongly-AFK slice is worse than a correctly-HITL one – it produces work that gets reverted. When in doubt, mark HITL and explain what would need to be settled to make it AFK.
+Prefer AFK over HITL where possible, but do not optimistically mark something AFK to keep the autonomous loop fed. A wrongly-AFK slice is worse than a correctly-HITL one — it produces work that gets reverted. When in doubt, mark HITL and explain what would need to be settled to make it AFK.
 
 ### 5. Quiz the user
 
 Present the proposed breakdown as a numbered list. For each slice, show:
 
-- **Title** – short descriptive name
-- **Type** – HITL or AFK (with one-line reason if HITL)
-- **Blocked by** – which other slices (if any) must complete first
-- **User stories covered** – which user stories this addresses (if the source material has them)
+- **Title** — short descriptive name
+- **Type** — HITL or AFK (with one-line reason if HITL)
+- **Blocked by** — which other slices (if any) must complete first
+- **User stories covered** — which user stories this addresses (if the source material has them)
 
-Then walk the user through these questions **one at a time** – present, get an answer, move on:
+Then walk the user through these questions **one at a time** — present, get an answer, move on:
 
 1. Does the granularity feel right? (too coarse / too fine / good)
 2. Are the dependency relationships correct?
@@ -107,12 +107,12 @@ A concise description of this vertical slice. Describe the end-to-end behavior, 
 - [ ] Criterion 2
 - [ ] Criterion 3
 
-Each criterion should be observable and testable from outside the system – an input/output pair, an externally-visible state change, or a check a CI step could run. Avoid restating the title ("- [ ] Feature works") and avoid implementation details ("- [ ] Uses Redis"). A reader should be able to tell, with no further context, whether the criterion is met.
+Each criterion should be observable and testable from outside the system — an input/output pair, an externally-visible state change, or a check a CI step could run. Avoid restating the title ("- [ ] Feature works") and avoid implementation details ("- [ ] Uses Redis"). A reader should be able to tell, with no further context, whether the criterion is met.
 
 ## Blocked by
 
 - A reference to the blocking ticket (if any)
 
-Or "None – can start immediately" if no blockers.
+Or "None — can start immediately" if no blockers.
 
 </issue-template>

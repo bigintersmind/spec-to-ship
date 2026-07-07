@@ -29,9 +29,7 @@ This makes AI-generated triage activity scannable for the maintainer when review
 - [AGENT-BRIEF.md](AGENT-BRIEF.md) — how to write durable agent briefs
 - [OUT-OF-SCOPE.md](OUT-OF-SCOPE.md) — how the `.out-of-scope/` knowledge base works
 
-## Process
-
-### 1. Load the per-repo conventions
+## Load the per-repo conventions
 
 This skill speaks in stable verbs — "publish to the issue tracker", "fetch the relevant ticket", "comment on a ticket", "apply the `<role>` triage label", "close the ticket". The concrete behavior for *this* repo lives in two files:
 
