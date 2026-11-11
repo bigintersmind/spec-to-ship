@@ -12,7 +12,7 @@ The plugin is nested under `plugin/` so the rest of the repo (this `CLAUDE.md`, 
 
 Manifests:
 
-- `.claude-plugin/marketplace.json` — marketplace listing at the repo root. Its `source: "./plugin"` is the boundary between repo-only files and what ships. It also lists `pr-merge`, which lives in its own repo (`bigintersmind/pr-merge`) via a `git-subdir` source; edits to that skill happen there, not here.
+- `.claude-plugin/marketplace.json` — marketplace listing at the repo root. Its `source: "./plugin"` is the boundary between repo-only files and what ships. It also lists `pr-merge`, which lives in its own repo (`bigintersmind/pr-merge`) via a `git-subdir` source; edits to that skill, and its version bumps, happen there, not here.
 - `plugin/.claude-plugin/plugin.json` — plugin metadata (name, version, description). Lives inside the plugin directory.
 
 Bumping `version` in `plugin/.claude-plugin/plugin.json` is the release knob; there is no separate publish step beyond pushing to the marketplace-referenced repo.
