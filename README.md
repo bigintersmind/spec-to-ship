@@ -54,6 +54,8 @@ These scripts are **bespoke shell harnesses that shell out to the `claude` CLI**
 
 After install, skills are available namespaced as `spec-to-ship:spec`, `spec-to-ship:prd`, etc. Claude triggers them automatically based on the description in each `SKILL.md`; you can also invoke them by name. This README uses the short form (`/spec`); reach for the namespaced form (`/spec-to-ship:spec`) only if another plugin claims the same name.
 
+The same marketplace also lists [pr-merge](https://github.com/bigintersmind/pr-merge), a separate skill for taking a finished GitHub pull request through review to merge (needs an authenticated `gh`). It's not part of the spec-to-ship arc, and you can install it on its own: `/plugin install pr-merge@bigintersmind`.
+
 ## Quickstart
 
 A typical session, from empty repo to a ticket an AFK loop can pick up:
